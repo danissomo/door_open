@@ -3,7 +3,7 @@
 import rospy
 from aruco import Aruco, ArucoTimeStampedContainer
 from husky import PositionHystrory, Robot
-from ur_ar_definer import ArucoRelManipulatorNode, StampedArucoRelManipulator
+from old_pipeline.ur_ar_definer import ArucoRelManipulatorNode, StampedArucoRelManipulator
 import numpy as np
 import math
 from scipy.spatial.transform import Rotation

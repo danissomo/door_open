@@ -27,8 +27,9 @@ except ImportError:
 from aruco_localization.msg._aruco_msg import aruco_msg
 
 # custom classes
-from aruco import Aruco, ArucoIdTypes
-from custom_types import ArucoRelManipulatorNode
+from old_pipeline.aruco import Aruco, ArucoIdTypes
+from old_pipeline.custom_types import ArucoRelManipulatorNode
+from param_provider import ParamProvider
 
 
 class PositionHystrory:
@@ -53,19 +54,12 @@ class PositionHystrory:
             "ur_gripper",
             "ur_arm_base"
         )
-        # br.sendTransform(
-        #     (-0.03284863, -0.12941748, -0.08414625),
-        #     (0, 0, 0, 1),
-        #     cur_time,
-        #     "rs_camera",
-        #     "ur_gripper",
-        # )
 
         br.sendTransform(
-            (-0.03284863, -0.08, -0.08414625),
+            ParamProvider.rs_frame,
             (0, 0, 0, 1),
             cur_time,
-            "rs_camera",
+            ParamProvider.rs_frame_name,
             "ur_gripper",
         )
 
@@ -89,11 +83,11 @@ class PositionHystrory:
 
 class Robot:
     def __init__(self, UR_IP) -> None:
-        self._velocityTopicName = "/husky_velocity_controller/cmd_vel"
+        self._velocityTopicName = ParamProvider.vel_topic
         self._velocityTopic = rospy.Publisher(
             self._velocityTopicName, Twist, queue_size=1)
 
-        self._odomTopicName = "/husky_velocity_controller/odom"
+        self._odomTopicName = ParamProvider.odom_topic
         self._odomSub = rospy.Subscriber(
             self._odomTopicName, Odometry, callback=self.OdomCallback, queue_size=1)
         self._baseActualPosition = None
