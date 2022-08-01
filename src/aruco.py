@@ -21,6 +21,10 @@ class Aruco:
         self.fromArSpaceR_Matrix = np.zeros((4,4))
         self.doorOffsetInArSpace =[-0.06406069,  0.00545401,  0.06892106,  1.        ]
 
+        self.Xaxis = np.zeros(3)
+        self.Yaxis = np.zeros(3)
+        self.Zaxis = np.zeros(3)
+
     def ToManipulator(self, tcpPose):
         pass
 
@@ -65,6 +69,11 @@ class Aruco:
         yv /= np.linalg.norm(yv)
         zv = np.cross(xv, yv)
         zv /= np.linalg.norm(zv)
+
+        self.Xaxis = copy.copy(xv)
+        self.Yaxis = copy.copy(yv)
+        self.Zaxis = copy.copy(zv)
+        
         self.toArSpaceR_Matrix = np.array([
             [xv[0], xv[1], xv[2], 0],
             [yv[0], yv[1], yv[2], 0],

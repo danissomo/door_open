@@ -37,7 +37,7 @@ class PositionHystrory:
         self.hystory = deque(maxlen=maxlen)
         self._time = "time"
         self._pose = "pose"
-        self.timer = rospy.Timer(rospy.Duration(nsecs=100), self.callback)
+        self.timer = rospy.Timer(rospy.Duration(nsecs=1), self.callback)
         
 
     def callback(self, arg):
@@ -45,17 +45,26 @@ class PositionHystrory:
                              self._pose: self._eefPoseGetter()})
         manipulatorPose = self._eefPoseGetter()
         br = tf.TransformBroadcaster()
+        cur_time = rospy.get_rostime()
         br.sendTransform(
             (manipulatorPose[0], manipulatorPose[1], manipulatorPose[2]),
             list(Rotation.from_rotvec(manipulatorPose[3:]).as_quat() ),
-            rospy.get_rostime(),
+            cur_time,
             "ur_gripper",
             "ur_arm_base"
         )
+        # br.sendTransform(
+        #     (-0.03284863, -0.12941748, -0.08414625),
+        #     (0, 0, 0, 1),
+        #     cur_time,
+        #     "rs_camera",
+        #     "ur_gripper",
+        # )
+
         br.sendTransform(
-            (-0.03284863, -0.12941748, -0.08414625),
+            (-0.03284863, -0.08, -0.08414625),
             (0, 0, 0, 1),
-            rospy.get_rostime(),
+            cur_time,
             "rs_camera",
             "ur_gripper",
         )
@@ -383,3 +392,7 @@ class Robot:
                            2,
                            [2, 2, 2, math.pi, math.pi, math.pi])
             time.sleep(0.1)
+
+    def ChangeOrientation(self, rotvec, vel = 0.25, acc = 1.2, asyncro = False):
+        actual = self.GetActualTCPPose()
+        self.MoveL([actual[0], actual[1], actual[2], rotvec[0], rotvec[1], rotvec[2]], vel, acc, asyncro)
