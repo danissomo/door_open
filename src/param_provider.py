@@ -11,3 +11,4 @@ class ParamProvider:
                                 rospy.get_param("rs_frame_y", -0.08),
                                 rospy.get_param("rs_frame_z", -0.08414625)
                             )
+    door_hinge_topic        : str = rospy.get_param("door_hinge_topic", "door_hinge")
