@@ -212,3 +212,8 @@ class HuskyUr:
     def ChangeOrientation(self, rotvec, vel = 0.25, acc = 1.2, asyncro = False):
         actual = self.GetActualTCPPose()
         self.MoveL([actual[0], actual[1], actual[2], rotvec[0], rotvec[1], rotvec[2]], vel, acc, asyncro)
+
+    
+    def MoveL_point_rot(self, pose, orient, vel=0.25, acc=1.2, asyncro=False):
+        cmd = list(pose) + list(orient)
+        self.MoveL(cmd, vel, acc, asyncro)
