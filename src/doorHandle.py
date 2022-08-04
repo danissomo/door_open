@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import time
 import rospy
 import tf
 from geometry_msgs.msg import PoseArray, PointStamped
@@ -121,7 +122,19 @@ class DoorHandle:
     def StartUpdateHandle(self):
         self._update_flag = True
 
+    def WaitData(self, timeout = 1):
+        start_time = time.time()
+        while (self.handleSkeleton is None or self.coordinateSystem is None) and time.time() - start_time <= timeout:
+            rospy.sleep(0.001)
+        return time.time() - start_time <= timeout
+    
+    def ClearData(self):
+        self.StopUpdateHandle()
+        self.handleSkeleton = None
+        self.coordinateSystem = None
+        self.StartUpdateHandle()
 
+            
 if __name__ == "__main__":
     rospy.init_node("DebugHandleCapture")
 

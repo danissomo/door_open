@@ -11,7 +11,10 @@ class HuskyUr:
         self._rtde_c = rtde_control.RTDEControlInterface(
             UR_IP, rtde_control.RTDEControlInterface.FLAG_VERBOSE | rtde_control.RTDEControlInterface.FLAG_USE_EXT_UR_CAP)
         self._rtde_r = rtde_receive.RTDEReceiveInterface(UR_IP)
-    
+        self.FOLDED_JOINTS = [1.602, -2.869, 2.683, -2.869, -1.584, -0.001]
+        self.INITIAL_JOINTS = [1.5356833934783936, -2.314944569264547, 1.5893230438232422, -2.4188268820392054, -1.5548914114581507, 0.01770407147705555]
+        self.REACH_RADIUS = 0.8
+
 
     # rtde library part
     def ForceModeStop(self):
@@ -217,3 +220,9 @@ class HuskyUr:
     def MoveL_point_rot(self, pose, orient, vel=0.25, acc=1.2, asyncro=False):
         cmd = list(pose) + list(orient)
         self.MoveL(cmd, vel, acc, asyncro)
+
+    def GetActualRotMatrix(self):
+        return Rotation.from_rotvec(self.GetActualTCPPose()[3:]).as_matrix()
+
+    def Fold(self, vel = 0.25, acc = 1.2, asynchro = False):
+        self.MoveJ(self.FOLDED_JOINTS, vel, acc, asynchro)
