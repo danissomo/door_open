@@ -1,19 +1,25 @@
+from rtde_control import RTDEControlInterface
+from rtde_receive import RTDEReceiveInterface
 import rospy
 import math
 import numpy as np
-import rtde_control, rtde_receive
 import time
 from scipy.spatial.transform import Rotation
-from old_pipeline.custom_types import ArucoRelManipulatorNode
 class HuskyUr:
 
-    def __init__(self, UR_IP) -> None:
-        self._rtde_c = rtde_control.RTDEControlInterface(
-            UR_IP, rtde_control.RTDEControlInterface.FLAG_VERBOSE | rtde_control.RTDEControlInterface.FLAG_USE_EXT_UR_CAP)
-        self._rtde_r = rtde_receive.RTDEReceiveInterface(UR_IP)
+    def __init__(self, UR_IP):
+        try:
+            self._rtde_c = RTDEControlInterface(
+                UR_IP, RTDEControlInterface.FLAG_VERBOSE | RTDEControlInterface.FLAG_USE_EXT_UR_CAP)
+            self._rtde_r = RTDEReceiveInterface(UR_IP)
+            rospy.loginfo("UR5 CONNECTED ON IP {}".format(UR_IP))
+        except RuntimeError as e:
+            rospy.logfatal(e)
+            exit()
         self.FOLDED_JOINTS = [1.602, -2.869, 2.683, -2.869, -1.584, -0.001]
-        self.INITIAL_JOINTS = [1.5356833934783936, -2.314944569264547, 1.5893230438232422, -2.4188268820392054, -1.5548914114581507, 0.01770407147705555]
-        self.REACH_RADIUS = 0.8
+        self.INITIAL_JOINTS = [1.5547375679016113, -2.3851588408099573, 1.8522262573242188, -2.5852845350848597, -1.5306795279132288, -0.0008385817157190445]
+        self.REACH_RADIUS = 1.0
+        self.FORCE_MODE_SAFE_RADIUS = 0.5
 
 
     # rtde library part
@@ -217,12 +223,16 @@ class HuskyUr:
         self.MoveL([actual[0], actual[1], actual[2], rotvec[0], rotvec[1], rotvec[2]], vel, acc, asyncro)
 
     
-    def MoveL_point_rot(self, pose, orient, vel=0.25, acc=1.2, asyncro=False):
+    def MoveL_point_rot(self, pose, orient, vel=0.25, acc=1.2, IK = False, asyncro=False):
         cmd = list(pose) + list(orient)
-        self.MoveL(cmd, vel, acc, asyncro)
+        if not IK:
+            self.MoveL(cmd, vel, acc, asyncro)
+        else:
+            self._rtde_c.moveJ_IK(cmd, vel, acc, asyncro)
 
     def GetActualRotMatrix(self):
         return Rotation.from_rotvec(self.GetActualTCPPose()[3:]).as_matrix()
 
     def Fold(self, vel = 0.25, acc = 1.2, asynchro = False):
         self.MoveJ(self.FOLDED_JOINTS, vel, acc, asynchro)
+

@@ -12,6 +12,7 @@ class HuskyGripper:
         try:
             self._robotiq_client = actionlib.SimpleActionClient(
                 'command_robotiq_action', CommandRobotiqGripperAction)
+            rospy.loginfo("GRIPPER CONNECTED")
         except:
             self._robotiq_client = None
     # gripper

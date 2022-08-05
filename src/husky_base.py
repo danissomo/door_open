@@ -30,6 +30,9 @@ class HuskyBase:
     def GetBasePosition(self):
         return copy.copy(self._baseActualPosition)
 
+    def OdomCallback(self, odom):
+        self._baseActualPosition = odom.pose.pose
+        self._baseActualTwist = odom.twist.twist
 
     def SetBaseSpeed(self, cmd):
         t = TwistStamped()

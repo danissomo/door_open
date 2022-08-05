@@ -51,14 +51,17 @@ class DoorOpen:
         GRIPPER_STUCK = auto()
 
     def __init__(self) -> None:
-        rospy.init_node("~open")
+        if ParamProvider.is_roslaunch:
+            rospy.init_node("~")
+        else: 
+            rospy.init_node("door_open")
         rospy.on_shutdown(self.Cancel)
         self.force_limits = [0.5, 0.5, 0.5, math.pi/2, math.pi/2, math.pi/2]
         self.deltaUnblokDRfromSteady = np.array([0, 0, 0.03])
 
         self._speedScale = 1
 
-        self.robot = Robot(ParamProvider.ur_ip)
+        self.robot = Robot("192.168.131.40")
         self.pub_start_move = rospy.Publisher(ParamProvider.base_controller_topic, Bool, queue_size=10)
         self.door_handle_handler =  DoorHandle(ParamProvider.yolo_topic, "ur_arm_base")
         
@@ -69,9 +72,10 @@ class DoorOpen:
         self.sub = rospy.Subscriber(ParamProvider.door_hinge_topic, PoseArray, callback=self.YoloIntegration, queue_size=1)
 
         self.curDoorHinge = None
-        self._is_debug = True
+        self._is_debug = False
         #test
-        input("Press enter")
+        rospy.loginfo("!!FOR START PRESS ENTER!!")
+        input()
         self.YoloIntegration(None)
 
 
@@ -86,59 +90,31 @@ class DoorOpen:
             pass # выход в промежуточную точку
         
         if self.FindDoorHandle() == DoorOpen.ResultEnum.NO_OBJECTS_FOUND:
-            self.Cancel()
-            return
+            exit()
+            
 
         rs = self.GripHandle()
         if rs == self.ResultEnum.UNREACHABLE:
             rospy.logwarn("UNREACHABLE POINT")
-            self.Cancel()
-            return
+            exit()
         if rs == self.ResultEnum.NO_OBJECTS_FOUND:
             rospy.logwarn("NO OBJECTS")
-            self.Cancel()
-            return
+            exit()
+            
         # rotate handle
         gripped_frame = self.robot.GetActualTCPPose()
         self.RotateHandle()
-
-        # try open, need mod for left or right
         self.PullDoor()
-
-        # align with xy plane, need mod for left or right
-        while (not rospy.is_shutdown()) and not self.robot.IfAlignedYZtoXYPlane(0.15):
-            self.robot.ForceMode(   self.robot.GetActualTCPPose(), 
-                                    SelectorVec().x().z().rz().get(), 
-                                    [ 50, 0, 0, 0, 0, 30 ], 
-                                    2, 
-                                    self.force_limits )
-
-        self.robot.ForceModeStop()
-
-        #open in place, need mod for left or right
-        while (not rospy.is_shutdown()) and np.linalg.norm( np.array(self.robot.GetActualTCPPose()[:2]) ) > 0.5:
-            rot = self.robot.GetActualRotMatrix()
-            f_result = np.matmul(   rot, 
-                                    np.array( self.robot.GetActualTCPForce()[:3]) ) - np.array( [ 0, 0, 100 ] )
-            rf = np.matmul( rot, 
-                            np.array(self.robot.GetActualTCPForce()[3:]) )
-
-            self.robot._rtde_c.forceMode(   self.robot.GetActualTCPPose(),
-                                            SelectorVec().y().z().rx().get(), 
-                                            [   0, 
-                                                -f_result[1], 
-                                                -150, 
-                                                -8*self.robot.GetActualTCPForce()[3], 
-                                                0, 
-                                                0 ], 
-                                            2, 
-                                            self.force_limits )
-        
+        self.ReturnOrientation()
+        self.PullWithCompensation()
 
         # область ответственности прерывается, выполняется отъезд
         self.robot.ForceModeStop()
         self.robot.ActivateTeachMode()
-        self.pub_start_move.publish(Bool(True))  
+        self.pub_start_move.publish(Bool(True))
+        if self.robot._rtde_r.getSafetyMode() == 0:  
+            input("press")
+            self.robot.MoveBaseX(1, -0.2)
         self.WaitController()    
         # требуется завершение в виде отсоединения от двери
         self.DetachFromDoor()
@@ -167,44 +143,49 @@ class DoorOpen:
         self.robot.MoveJ( searching_pose, 1, 0.5)
         first_j_pose = self.robot.GetActualQ()[0]
         self.door_handle_handler.ClearData()
-        self.robot.SpeedJ([ -0.5, 0, 0, 0, 0, 0 ], 0.01)
+        self.door_handle_handler.WaitData(5)
+        self.door_handle_handler.ClearData()
+        self.robot.SpeedJ([ -0.5, 0, 0, 0, 0, 0 ], 0.04)
         handle_was = False
         count_trys = 0
         while (not rospy.is_shutdown()) and math.fabs(self.robot.GetActualQ()[0] - searching_pose[0])  <= math.pi:
             self.door_handle_handler.ClearData()
-            rs = self.door_handle_handler.WaitData(1.5)
-            if handle_was and not rs:
-                count_trys += 1
-            if count_trys > 3:
-                break
-            if (not handle_was) and rs:
+            if self.door_handle_handler.WaitData(1):
+                count_trys +=1
+            
+            if count_trys > 0:
                 handle_was = True
+                break
 
         self.robot.SpeedStop()
         if not handle_was:
             return self.ResultEnum.NO_OBJECTS_FOUND
         handle_midle_angle_pose = [(first_j_pose + self.robot.GetActualQ()[0])/2] + searching_pose[1:]
-        self.robot.MoveJ(   handle_midle_angle_pose, 
-                            self._speedScale * 0.1, 
-                            self._speedScale * 0.1 )       
+        # self.robot.MoveJ(   handle_midle_angle_pose, 
+        #                     self._speedScale * 1, 
+        #                     self._speedScale * 0.1 )       
         return self.ResultEnum.SUCCESS
 
 
 
     def GripHandle(self):
-        self.door_handle_handler.WaitData()
+        rospy.sleep(3)
+        self.door_handle_handler.ClearData()
+        self.door_handle_handler.WaitData(3)
         self.door_handle_handler.StopUpdateHandle()
         handle_basis = self.door_handle_handler.GetActualCoordSystem()
         point_for_grip = self.door_handle_handler.GetActualMiddlePoint()
-        self.door_handle.StartUpdateHandle()
+        self.door_handle_handler.StartUpdateHandle()
         if (handle_basis is not None) and (point_for_grip is not None):
             if np.linalg.norm(point_for_grip) >= self.robot.REACH_RADIUS:
+                rospy.loginfo(point_for_grip)
                 return self.ResultEnum.UNREACHABLE
 
             self.robot.MoveL_point_rot( point_for_grip, 
                                         self.robot.RotvecFromBasis(handle_basis), 
-                                        0.5, 
-                                        0.1)
+                                        1, 
+                                        0.4,
+                                        True)
             self.robot.ActivateTeachMode()
             self.robot.CloseGripper()
             rospy.sleep(0.1)
@@ -235,8 +216,8 @@ class DoorOpen:
 
         while (not rospy.is_shutdown()) and (not all(np.fabs(actual_opening_frame - start_opening_frame) >= self.deltaUnblokDRfromSteady)):
             self.robot.ForceMode(   self.robot.GetActualTCPPose(), 
-                                    SelectorVec().x().z().rz().get(), 
-                                    [ -150, 0, -150, 0, 0, -50 ], 
+                                    SelectorVec().x().z().get(), 
+                                    [ -150, 0, -150, 0, 0, 0 ], 
                                     2, 
                                     self.force_limits ) 
             actual_opening_frame = np.matmul(
@@ -245,17 +226,54 @@ class DoorOpen:
             )
 
         self.robot.ForceModeStop()
-        pass
+        return self.ResultEnum.SUCCESS
+
+    def PullWithCompensation(self):
+        while (not rospy.is_shutdown()) and np.linalg.norm( np.array(self.robot.GetActualTCPPose()[:2]) ) > self.robot.FORCE_MODE_SAFE_RADIUS:
+            rot = self.robot.GetActualRotMatrix()
+            f_result = np.matmul(   rot, np.array( self.robot.GetActualTCPForce()[:3]) ) - np.array( [ 0, 0, 100 ] )
+            rf = np.matmul( rot, np.array(self.robot.GetActualTCPForce()[3:]) )
+
+            self.robot._rtde_c.forceMode(   self.robot.GetActualTCPPose(),
+                                            SelectorVec().y().z().rx().get(), 
+                                            [   0, 
+                                                -f_result[1], 
+                                                -150, 
+                                                -8*self.robot.GetActualTCPForce()[3], 
+                                                0, 
+                                                0 ], 
+                                            2, 
+                                            self.force_limits )
+        self.ResultEnum.SUCCESS
+
+        
+
+    
+    def ReturnOrientation(self):
+        # align with xy plane, need mod for left or right
+        while (not rospy.is_shutdown()) and not self.robot.IfAlignedYZtoXYPlane(0.15):
+            self.robot.ForceMode(   self.robot.GetActualTCPPose(), 
+                                    SelectorVec().x().z().rz().get(), 
+                                    [ 50, 0, 0, 0, 0, 30 ], 
+                                    2, 
+                                    self.force_limits )
+
+        self.robot.ForceModeStop()
 
 
 
     def Cancel(self):
-        self.robot.ForceModeStop()
-        self.robot.SpeedStop()
-        self.robot.ActivateTeachMode()
-        self.robot.OpenGripper()
+        try:
+            self.robot.ForceModeStop()
+            self.robot.SpeedStop()
+            self.robot.ActivateTeachMode()
+            self.robot.OpenGripper()
+            self.robot.DeactivateTeachMode()
+            self.robot.MoveJ(self.robot.INITIAL_JOINTS)
+            self.robot.Fold()
+        except AttributeError as e:
+            rospy.logfatal(e)
         
-
 
 
     def DetachFromDoor(self):
@@ -264,7 +282,7 @@ class DoorOpen:
 
 
     def WaitController(self):
-        pass
+        input()
 
 
 

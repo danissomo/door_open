@@ -40,21 +40,25 @@ class PositionHystrory:
         manipulatorPose = self._eefPoseGetter()
         br = tf.TransformBroadcaster()
         cur_time = rospy.get_rostime()
-        br.sendTransform(
-            (manipulatorPose[0], manipulatorPose[1], manipulatorPose[2]),
-            list(Rotation.from_rotvec(manipulatorPose[3:]).as_quat() ),
-            cur_time,
-            "ur_gripper",
-            "ur_arm_base"
-        )
+        try:
+            br.sendTransform(
+                (manipulatorPose[0], manipulatorPose[1], manipulatorPose[2]),
+                list(Rotation.from_rotvec(manipulatorPose[3:]).as_quat() ),
+                cur_time,
+                "ur_gripper",
+                "ur_arm_base"
+            )
 
-        br.sendTransform(
-            ParamProvider.rs_frame,
-            (0, 0, 0, 1),
-            cur_time,
-            ParamProvider.rs_frame_name,
-            "ur_gripper",
-        )
+            br.sendTransform(
+                ParamProvider.rs_frame,
+                (0, 0, 0, 1),
+                cur_time,
+                ParamProvider.rs_frame_name,
+                "ur_gripper",
+            )
+        except rospy.exceptions.ROSException as e:
+            rospy.logwarn("ERROR PUBLISH TO TF-TREE: {}".format(e))
+        rospy.loginfo_once("UR5 PUBLIHED TO TF-TREE")
 
     def FindPoseByMinTimeDiff(self, time):
         actual = self.hystory.copy()
@@ -76,18 +80,20 @@ class PositionHystrory:
 
 class Robot(HuskyGripper, HuskyUr, HuskyBase):
     def __init__(self, UR_IP) -> None:
+        
+        self.poseLocked = False
+
         HuskyBase.__init__(self)
         HuskyGripper.__init__(self)
         HuskyUr.__init__(self, UR_IP)
-        
+
         self._eefHystory = PositionHystrory(self.GetActualTCPPose)
-        self.poseLocked = False
+        
 
     
 
     def OdomCallback(self, odom):
-        self._baseActualPosition = odom.pose.pose
-        self._baseActualTwist = odom.twist.twist
+        HuskyBase.OdomCallback(self, odom)
         if self.poseLocked:
             self.CorrectPositionByTwist()
 

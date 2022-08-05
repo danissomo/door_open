@@ -1,4 +1,4 @@
-from aruco import Aruco
+from old_pipeline.aruco import Aruco
 import numpy as np
 class ArucoRelManipulatorNode:
     def __init__(self):

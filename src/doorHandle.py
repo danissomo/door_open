@@ -51,6 +51,7 @@ class DoorHandle:
             self._Debug()
         
         self._externalCallback(self)
+        rospy.loginfo_once("HANDLE DATA CAPTURED")
 
 
 

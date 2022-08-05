@@ -1,13 +1,16 @@
 <launch>
-    <node name = "/door_open/node" pkg = "door_tests" type = "door_open_node.py">
-        <param name = "odom_topic"              value = "/husky_velocity_controller/odom"       type = "str" />
-        <param name = "vel_topic"               value = "/husky_velocity_controller/cmd_vel"    type = "str" />
-        <param name = "yolo_topic"              value = "/handle/points_yolo"                   type = "str" />
-        <param name = "base_controller_topic"   value = "/some_topic"                           type = "str" />
-        <param name = "ur_ip"                   value = "192.168.131.40"                        type = "str" />
-        <param name = "rs_frame_name"           value = "rs_camera"                             type = "str" />
-        <param name = "rs_frame_x"              value = "-0.03284863"                           type = "double" />
-        <param name = "rs_frame_y"              value = "-0.08"                                 type = "double" />
-        <param name = "rs_frame_z"              value = "-0.08414625"                           type = "double" />
-    </node> 
-</launch>ёё
+    <group ns = "/door_open">
+        <node name = "node" pkg = "door_tests" type = "door_open_node.py">
+            <param name = "odom_topic"              value = "/husky_velocity_controller/odom"       type = "str" />
+            <param name = "vel_topic"               value = "/husky_velocity_controller/cmd_vel"    type = "str" />
+            <param name = "yolo_topic"              value = "/handle/points_yolo"                   type = "str" />
+            <param name = "base_controller_topic"   value = "/some_topic"                           type = "str" />
+            <param name = "ur_ip"                   value = "192.168.131.40"                        type = "str" />
+            <param name = "rs_frame_name"           value = "rs_camera"                             type = "str" />
+            <param name = "rs_frame_x"              value = "-0.03284863"                           type = "double" />
+            <param name = "rs_frame_y"              value = "-0.08"                                 type = "double" />
+            <param name = "rs_frame_z"              value = "-0.08414625"                           type = "double" />
+            <param name = "is_roslaunch"            value = "true"                                  type = "bool" />
+        </node> 
+    </group>
+</launch>
