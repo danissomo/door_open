@@ -99,6 +99,15 @@ class Robot(HuskyGripper, HuskyUr, HuskyBase):
 
 
 
+    def LockPose(self):
+        rospy.loginfo("POSE LOCKED")
+        self.poseLocked = True
+
+    def PoseUnlock(self):
+        rospy.loginfo("POSE UNLOCKED")
+        self.poseLocked = False
+
+
     def CorrectPositionByTwist(self):
         twist = copy.copy(self._baseActualTwist)
         pose = self.GetActualTCPPose()
@@ -118,8 +127,9 @@ class Robot(HuskyGripper, HuskyUr, HuskyBase):
         handle_pos = ar.aruco.GetHandlePose()
         cmd = list(handle_pos) + list(ar.rotvecAlignedNormal)
         self.MoveL(cmd, 0.2, 0.2)
-        self._rtde_c.forceMode(self.GetActualTCPPose(), [0, 0, 0, 1, 0, 1], [
-                               0, 0, 0, 0, 0, 0], 2, force_limits)
+        self._rtde_c.forceMode(self.GetActualTCPPose(), 
+                                [0, 0, 0, 1, 0, 1], 
+                                [0, 0, 0, 0, 0, 0], 2, force_limits)
         self.CloseGripper()
         rospy.sleep(1)
         return True
@@ -131,3 +141,15 @@ class Robot(HuskyGripper, HuskyUr, HuskyBase):
         print(self.GetActualTCPPose())
         input("set init pose and press enter")
         self.DeactivateTeachMode()
+
+
+
+    def LookAt(self, point, vel = 0.25, acc = 1.2, asyncro = False):
+        point = np.array(point)
+        tcpXYZ = np.array( self.GetActualTCPPose()[0:3])
+        forward = point - tcpXYZ
+        forward /= np.linalg.norm(forward)
+        right = np.cross([0, 0, 1], forward)
+        up = np.cross(forward, right)
+        rot = self.RotvecFromBasis([right, up, forward])
+        self.ChangeOrientation(rot, vel, acc, asyncro)

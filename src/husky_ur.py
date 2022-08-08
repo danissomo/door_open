@@ -61,9 +61,15 @@ class HuskyUr:
         return self._rtde_c.moveL(pose, vel, acc, asyncro)
 
     def SpeedJ(self, speed, acc=0.5, time=0.0):
+        if self._IsNaNorInf(speed):
+            rospy.logwarn("robot controller got inf or nan")
+            return False
         return self._rtde_c.speedJ(speed, acc, time)
 
     def SpeedL(self, speed, acc=0.25, time=0.0):
+        if self._IsNaNorInf(speed):
+            rospy.logwarn("robot controller got inf or nan")
+            return False
         return self._rtde_c.speedL(speed, acc, time)
 
     def SpeedStop(self, acc=10.0):
@@ -195,11 +201,6 @@ class HuskyUr:
     def GetManipulatorHystory(self):
         return self._eefHystory
 
-    def LockPose(self):
-        self.poseLocked = True
-
-    def PoseUnlock(self):
-        self.poseLocked = False
 
     def OrientationByForceMode(self, estimationBasis, epsilon=0.1):
         estimationBasis = np.array(estimationBasis)
@@ -228,6 +229,9 @@ class HuskyUr:
         if not IK:
             self.MoveL(cmd, vel, acc, asyncro)
         else:
+            if self._IsNaNorInf(cmd):
+                rospy.logwarn("robot controller got inf or nan")
+                return False
             self._rtde_c.moveJ_IK(cmd, vel, acc, asyncro)
 
     def GetActualRotMatrix(self):

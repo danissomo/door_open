@@ -15,6 +15,18 @@ from husky import Robot
 from param_provider import ParamProvider
 from doorHandle import DoorHandle
 
+## TODO
+##  1. реализовать метод WatchOnPoint
+##  2. добавить проверку наличия ручки с помощью 1
+##  3. сделать открытие двери наружу
+##  
+##
+##
+##
+##
+##
+##
+
 
 class SelectorVec:
     def __init__(self) -> None:
@@ -75,9 +87,13 @@ class DoorOpen:
         self._is_debug = False
         #test
         rospy.loginfo("!!FOR START PRESS ENTER!!")
-        input()
-        self.YoloIntegration(None)
+        self.test()
+        #input()
+        #self.YoloIntegration(None)
 
+    def test(self):
+        self.robot.ManualPose()
+        self.robot.LookAt([0, - 1, 0])
 
     def YoloIntegration(self, doorHinge : PoseArray):
         self.curDoorHinge = doorHinge
@@ -119,6 +135,8 @@ class DoorOpen:
         # требуется завершение в виде отсоединения от двери
         self.DetachFromDoor()
         self.Cancel()
+
+
 
 
     def Init(self):
