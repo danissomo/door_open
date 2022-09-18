@@ -1,50 +1,58 @@
-from selector_generator import SelectorVec
-from enum import Enum, auto
-import math
-
-class FrameTypeEnum(Enum):
-    eACTUAL = auto()
-    eEXTERNAL = auto()
-    eONSTART = auto()
-    eNONE = auto()
-
-
-
-class ForceModeParameters:
-    def __init__(self, frameType = FrameTypeEnum.eNONE, selector = [0]*6, mode = 2, limits = [0]*6) -> None:
-        self.selector = selector
-        self.mode = mode
-        self.limits = limits
-        self.frameType = FrameTypeEnum
-
-    
-
+import copy
+from geometry_msgs.msg import PoseStamped
+from doorHandle import DoorHandle
+from scipy.spatial import KDTree
+import numpy as np
 class Door:
     def __init__(self) -> None:
-        self.doorHinge = None
-        self.doorHandle = None
-        self._is_left = True
-        self._is_push = False
-        self._angle = 0
-        self._is_init = False
-        self.forceToRotateHandle = ForceModeParameters()
-        self.forceToUnblock = ForceModeParameters()
-
-    def Init(self, is_left, is_push, angle = 0):
-        self._is_init = True
-        self._is_left =  is_left
-        self._is_push = is_push
-        self.angle = angle
-       
+        self.id = 0
+        self.door_handle : DoorHandle = DoorHandle()
+           
 
 
 
 
-    def IsRight(self):
-        return not self._is_left
+class DoorContext:
+    def __init__(self) -> None:
+        self.is_left = True
+        self.is_push = True
+        self.door = Door()
+    
     def IsLeft(self):
-        return self._is_left
-    def IsPull(self):
-        return not self._is_push
+        return self.is_left
+    def IsRight(self):
+        return not self.is_left
     def IsPush(self):
-        return self._is_push
+        return self.is_push
+    def IsPull(self):
+        return not self.is_push
+    
+    def SetLeft(self):
+        self.is_left = True
+    def SetRight(self):
+        self.is_left = False
+    def SetPush(self):
+        self.is_push = True
+    def SetPull(self):
+        self.is_push = False  
+    def Negate(self):
+        rt = copy.copy(self)
+        rt.is_left = self.IsRight()
+        rt.is_push = self.IsPull()
+        return rt
+
+    
+class DoorContainer:
+    def __init__(self) -> None:
+        self._door_list = []
+        self._door_tree : KDTree = None
+
+
+    def addIfExUpdateIfNotEx(self, door_ctx : DoorContext,  eps = 1):
+        d, i = self._door_tree.query(door_ctx.door.GlobPosAsNumpy())
+        if np.linalg.norm(d) < eps:
+            door_ctx_old : DoorContext = self._door_tree[i]
+            door_ctx_old.door.door_handle = door_ctx.door
+
+    def find(self, ps : PoseStamped, eps) -> DoorContext:
+        pass

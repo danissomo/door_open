@@ -12,8 +12,9 @@ from geometry_msgs.msg import PoseArray
 
 #custom
 from husky import Robot
-from param_provider import ParamProvider
-from doorHandle import DoorHandle
+from utils import ParamProvider
+from doorHandle import DoorHandleHandler
+from door import DoorContext, Door
 
 import time
 ## TODO
@@ -27,7 +28,7 @@ import time
 ##
 
 
-from selector_generator import SelectorVec
+from utils import SelectorVec
     
 class DoorOpen:
     
@@ -53,6 +54,9 @@ class DoorOpen:
         else: 
             rospy.init_node("door_open")
         rospy.on_shutdown(self.Cancel)
+        #new feature
+        self.door_ctx = DoorContext()
+
         self.force_limits = [1, 1, 1, math.pi, math.pi, math.pi]
         self.deltaUnblokDRfromSteady = np.array([0, 0, 0.1])
 
@@ -60,7 +64,7 @@ class DoorOpen:
 
         self.robot = Robot(ParamProvider.ur_ip)
         self.pub_start_move = rospy.Publisher(ParamProvider.base_controller_topic, Bool, queue_size=10)
-        self.door_handle_handler =  DoorHandle(ParamProvider.yolo_topic, "ur_arm_base")
+        self.door_handle_handler =  DoorHandleHandler(ParamProvider.yolo_topic, "ur_arm_base")
         
         self.robot.ForceModeStop()
         self.robot.ActivateTeachMode()
@@ -74,13 +78,17 @@ class DoorOpen:
         rospy.loginfo("!!FOR START PRESS ENTER!!")
         input()
         self.OpenDoorPush(None)
-        #self.YoloIntegration(None)
+        self.YoloIntegration(None)
 
     def test(self):
         self.robot.ManualPose()
         self.robot.LookAt([0, - 1, 0])
 
+    
     def YoloIntegration(self, doorHinge : PoseArray):
+        '''
+        door pull left 
+        '''
         self.curDoorHinge = doorHinge
         self.Init()
         if self._is_debug:
@@ -228,16 +236,16 @@ class DoorOpen:
         self.door_handle_handler.ClearData()
         self.door_handle_handler.WaitData(3)
         self.door_handle_handler.StopUpdateHandle()
-        handle_basis = self.door_handle_handler.GetActualCoordSystem()
-        point_for_grip = self.door_handle_handler.GetActualMiddlePoint()
+        door_h = self.door_handle_handler.GetActualDoorHandle()
         self.door_handle_handler.StartUpdateHandle()
-        if (handle_basis is not None) and (point_for_grip is not None):
+        if door_h is not None:
+            point_for_grip = door_h.GetMiddlePoint()
             if np.linalg.norm(point_for_grip) >= self.robot.REACH_RADIUS:
                 rospy.loginfo(point_for_grip)
                 return self.SolutionProposer(self.ResultEnum.UNREACHABLE, )
 
             self.robot.MoveL_point_rot( point_for_grip, 
-                                        self.robot.RotvecFromBasis(handle_basis), 
+                                        self.robot.RotvecFromBasis(door_h.coordinate_system_rel), 
                                         1, 
                                         0.4,
                                         True)

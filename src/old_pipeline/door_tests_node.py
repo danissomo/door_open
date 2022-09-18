@@ -403,7 +403,7 @@ def GripHandle():
 
 
 def YoloIntegration():
-    from doorHandle import DoorHandle
+    from doorHandle import DoorHandleHandler
     safe_distFdoor = 1.4
     force_limits = [0.5, 0.5, 0.5, math.pi/2, math.pi/2, math.pi/2]
     offsetFOpenedDoor = 0.15
@@ -413,7 +413,7 @@ def YoloIntegration():
     pub_start_move = rospy.Publisher("some_topic", Bool, queue_size=10)
     robot = Robot("192.168.131.40")
     robot._rtde_c.forceModeStop()
-    door_handle = DoorHandle("/handle/points_yolo", "ur_arm_base")
+    door_handle = DoorHandleHandler("/handle/points_yolo", "ur_arm_base")
 
     while not rospy.is_shutdown():
 
