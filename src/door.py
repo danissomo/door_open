@@ -1,4 +1,5 @@
 import copy
+from random import randint
 from geometry_msgs.msg import PoseStamped
 from doorHandle import DoorHandle
 from scipy.spatial import KDTree
@@ -46,13 +47,28 @@ class DoorContainer:
     def __init__(self) -> None:
         self._door_list = []
         self._door_tree : KDTree = None
+        self._id_set = set()
 
 
-    def addIfExUpdateIfNotEx(self, door_ctx : DoorContext,  eps = 1):
-        d, i = self._door_tree.query(door_ctx.door.GlobPosAsNumpy())
-        if np.linalg.norm(d) < eps:
-            door_ctx_old : DoorContext = self._door_tree[i]
-            door_ctx_old.door.door_handle = door_ctx.door
+    def IsKnown(self, doorCtx: DoorContext, eps = 0.5):
+        d, i = self._door_tree.query(doorCtx.door.door_handle.GetMiddlePoint())
+        return np.linalg.norm(d) <= eps
+
+    def AddIfNotKnown(self, doorCtx: DoorContext, eps = 0.5):
+        if not self.IsKnown(doorCtx, eps):
+            import random
+            rn = random.randint(0, 2**100)
+            while rn in self._id_set:
+                rn = random.randint(0, 2**100)
+            self._id_set.add(rn)
+            doorCtx.door.id = rn
+            self._door_list.append(copy.deepcopy(doorCtx))
+            self._door_tree = KDTree([dctx.door.door_handle.GetMiddlePoint() for dctx in self._door_list])
+        else:
+            d, i = self._door_tree.query(doorCtx.door.door_handle.GetMiddlePoint())
+            self._door_list[i].door.door_handle.coordinate_system_global = copy.copy(doorCtx.door.door_handle.coordinate_system_global)
+            self._door_list[i].door.door_handle.coordinate_system_rel  = copy.copy(doorCtx.door.door_handle.coordinate_system_rel)
+
 
     def find(self, ps : PoseStamped, eps) -> DoorContext:
         pass
