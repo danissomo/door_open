@@ -127,7 +127,7 @@ class DoorHandleHandler:
         def _transform_pose_array(frame, poseArray : PoseArray):
             try:
                 wait_for_transform(poseArray.header.frame_id, frame)
-                tf_function = lambda point : self._tfListener.transformPoint(frame, PointStamped(point = copy.copy(point), header = poseArray.header))
+                tf_function = lambda point : self._tfListener.transformPoint(frame, PointStamped(point = copy.copy(point.position), header = poseArray.header))
                 points_in_base =list (map(tf_function, poseArray.poses)) 
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
                 rospy.logwarn("EXCEPTION IN TF {}".format(e))

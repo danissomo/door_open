@@ -1,6 +1,5 @@
 import copy
 
-from sympy import false
 from geometry_msgs.msg import PointStamped
 from doorHandle import DoorHandle
 from scipy.spatial import KDTree
@@ -59,9 +58,11 @@ class DoorContext:
         '''
         Cheks side of given point relative to door plane.
         '''
+        point = np.array([point.x, point.y, point.z])
         if isinstance(point, PointStamped):
             point = PointStampedToNumpy(point)
         rt = (point - self.door.door_handle.GetMiddlePointGlob()).dot(self.door_normal)
+        rospy.loginfo(rt)
         return rt > 0
     
     
@@ -86,7 +87,7 @@ class DoorContainer:
 
     def IsKnown(self, doorCtx: DoorContext, eps = 0.5):
         if len(self._door_list)  == 0:
-            return false
+            return False
         d, i = self._door_tree.query(doorCtx.door.door_handle.GetMiddlePointGlob())
         return np.linalg.norm(d) <= eps
 
@@ -107,6 +108,8 @@ class DoorContainer:
 
 
     def GetNearestCtx(self, position, eps = 0.5):
+        if self._door_tree is None:
+            return None
         d, i = self._door_tree.query(position)
         if np.linalg.norm(d) < eps:
             return self._door_list[i]
@@ -143,7 +146,7 @@ class DoorContainer:
         marker.pose.orientation.y = 0 
         marker.pose.orientation.z = 0 
         marker.pose.orientation.w = 1 
-        for door_ctx in  self.handle_colors:
+        for door_ctx in  self._door_list:
             door_ctx : DoorContext = door_ctx
             for pointS in door_ctx.door.door_handle.handle_keypoints_global:
                 pointS : PointStamped= pointS

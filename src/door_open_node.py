@@ -5,7 +5,6 @@ import math
 from enum import Enum, auto
 import copy
 
-from sympy import true
 
 #ros
 import rospy
@@ -18,7 +17,6 @@ from utils import ParamProvider
 from doorHandle import DoorHandleHandler
 from door import DoorContainer, DoorContext, Door
 
-import time
 '''
 TODO:
 1. Add possibility for using door context
@@ -70,7 +68,7 @@ class DoorOpen:
         self.robot.ActivateTeachMode()
         self.robot.OpenGripper()
 
-        self.sub = rospy.Subscriber(ParamProvider.door_hinge_topic, PoseArray, callback=self.YoloIntegration, queue_size=1)
+        #self.sub = rospy.Subscriber(ParamProvider.door_hinge_topic, PoseArray, callback=self.YoloIntegration, queue_size=1)
 
         self.curDoorHinge = None
         self._is_debug = False
@@ -90,13 +88,14 @@ class DoorOpen:
         rs = self.FindDoorHandle()
         if rs.resultEnum == self.ResultEnum.SUCCESS:
             self.door_handle_handler.ClearData()
-            self.door_handle_handler.WaitData(3)
+            self.door_handle_handler.WaitData(10)
             self.door_ctx.door.door_handle =  self.door_handle_handler.GetActualDoorHandle()
             if self.door_ctx.door.door_handle.coordinate_system_global is not None:
-                self.door_ctx.door_normal = -self.door_ctx.door.door_handle.coordinate_system_global[2]
+                self.door_ctx.door_normal = - self.door_ctx.door.door_handle.coordinate_system_global[2]
                 #debug
-                rospy.logdebug(self.door_ctx.IsPositionPositive(self.robot.GetBasePosition()))
-                assert self.door_ctx.IsPositionPositive(self.robot.GetBasePosition()) == True
+                rospy.logdebug(self.door_ctx.IsPositionPositive(self.robot.GetBasePosition().position))
+                rospy.loginfo(self.door_ctx.door_normal)
+                assert self.door_ctx.IsPositionPositive(self.robot.GetBasePosition().position) == True
                 self.doors_stash.AddIfNotKnown(self.door_ctx)
                 return self.SolutionProposer(self.ResultEnum.SUCCESS)
         else:
@@ -116,7 +115,7 @@ class DoorOpen:
         else:
             pass # выход в промежуточную точку
         robot_pos = self.robot.GetBasePosition()
-        nearest = self.doors_stash.GetNearestCtx(robot_pos, 1.0)
+        nearest = self.doors_stash.GetNearestCtx(robot_pos.position, 1.0)
         if nearest is None:
             rs = self.Dialog()
             if rs.resultEnum == self.ResultEnum.NO_OBJECTS_FOUND:
@@ -128,7 +127,7 @@ class DoorOpen:
             handle = self.door_handle_handler.GetActualDoorHandle()
             self.door_ctx.door.door_handle = handle
             self.doors_stash.AddIfNotKnown(self.door_ctx)
-        if not self.door_ctx.IsPositionPositive(self.robot.GetBasePosition()):
+        if not self.door_ctx.IsPositionPositive(self.robot.GetBasePosition().position):
             self.door_ctx = self.door_ctx.Negate()
         
         self.GripHandle()
@@ -304,9 +303,9 @@ class DoorOpen:
         delta_q = -0.17 if self.door_ctx.IsLeft() else 0.17
         # manipulator left +
         #manipulator right -
-        while (not rospy.is_shutdown()) and math.fabs(self.robot.GetActualQ()[0] - searching_pose[0])  <= math.pi/2:
+        while (not rospy.is_shutdown()) and math.fabs(self.robot.GetActualQ()[0] - self.robot.INITIAL_JOINTS[0])  <= math.pi/2:
             self.door_handle_handler.ClearData()
-            if self.door_handle_handler.WaitData(1):
+            if self.door_handle_handler.WaitData(3):
                  return self.SolutionProposer(self.ResultEnum.SUCCESS)
             searching_pose[0] += delta_q
             self.robot.MoveJ(searching_pose)
