@@ -7,7 +7,6 @@ import tf
 from geometry_msgs.msg import PoseArray, PointStamped
 import copy 
 import numpy as np
-from visualization_msgs.msg import MarkerArray, Marker
 
 from utils import PointStampedToNumpy
 
@@ -64,7 +63,18 @@ class DoorHandle:
 
         
 
-    def GetMiddlePoint(self):
+    def GetMiddlePointGlob(self):
+        '''
+        calculate point for determine door in map
+        '''
+        if self.handle_keypoints_global is None:
+            import sys
+            raise AttributeError("Handle keypoints is None").with_traceback(sys.exc_info()[2])
+        rt = (    PointStampedToNumpy(self.handle_keypoints_global[1])
+                + PointStampedToNumpy(self.handle_keypoints_global[2]) ) / 2.0
+        return rt
+    
+    def GetMiddlePointRel(self):
         '''
         calculate point that used for grabbing handle, middle between 2 keypoints
         '''
@@ -102,30 +112,8 @@ class DoorHandleHandler:
 
         self._update_flag = True 
 
-        self._handls_stash = []             #must be deleted, DoorContainer will be managering handles
 
-        self.marker_pub = rospy.Publisher("handle_markers", MarkerArray, queue_size=1) #as same as handle stash will be deleted
-        self.timer_marker_maker = rospy.Timer(rospy.Duration(16.0*10**-3), self.DrawMarkers) # same
-
-
-
-    def IfHandleExistsInStash(self, handle : DoorHandle, epsilon_m = 0.5):
-        '''
-        Now it work on simple array but in future will be changed to KDtree from scipy.spatial
-        PARAMS:
-        @handle  - type DoorHandle for search
-        @epsilon_m - maximum diviation in meters between 2 points that we assume as same
-        RETURNS:
-        index of handle that near to given with some accur., if no one returns -1
-        '''
-        for i, handle_s in enumerate(self._handls_stash):
-            handle_s : DoorHandle = handle_s
-            diff = np.abs(PointStampedToNumpy(handle_s.handle_keypoints_global[0]) - PointStampedToNumpy(handle.handle_keypoints_global[0]))  < 0.5
-            if all(diff):
-                return i
-        return -1
             
-
 
     def handleSkeletonCallback(self, poseArray : PoseArray):
         '''
@@ -224,41 +212,6 @@ class DoorHandleHandler:
         self.StopUpdateHandle()
         self.actua_door_handle = DoorHandle()
         self.StartUpdateHandle()
-
-
-
-    def DrawMarkers(self, someData):        #old  interface
-        '''
-        Draw circles of random color in rviz.
-        Calling by rospy.Timer that starts in __init__
-        TODO: think about ns and topic name, change to stl models of door and handle
-        '''
-        handls_copy = copy.copy(self._handls_stash)
-        markerA = MarkerArray()
-        marker = Marker()
-        marker.type = Marker.SPHERE
-        marker.header.frame_id = "local_map_lidar"
-        marker.scale.x = 0.1
-        marker.scale.y = 0.1
-        marker.scale.z = 0.1
-        marker.color.a = 1
-        marker.ns = "my_namespace";
-        marker.action = Marker.ADD
-        marker.pose.orientation.x = 0 
-        marker.pose.orientation.y = 0 
-        marker.pose.orientation.z = 0 
-        marker.pose.orientation.w = 1 
-        for handle in  handls_copy:
-            for pointS in handle.handleSkeleton:
-                marker.pose.position = pointS.point
-                markerA.markers.append(copy.copy(marker))
-
-            marker.color.r = 1
-            marker.color.g = 1
-            marker.color.b = 0
-        self.marker_pub.publish(markerA)
-
-
 
 
 
