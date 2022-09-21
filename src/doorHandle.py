@@ -189,13 +189,13 @@ class DoorHandleHandler:
 
 
     def StopUpdateHandle(self):
-        rospy.loginfo("HANDLE UPDATING PAUSED")
+        rospy.logdebug("HANDLE UPDATING PAUSED")
         self._update_flag = False
     
 
 
     def StartUpdateHandle(self):
-        rospy.loginfo("HANDLE UPDATE STARTED")
+        rospy.logdebug("HANDLE UPDATE STARTED")
         self._update_flag = True
 
 

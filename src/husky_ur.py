@@ -149,6 +149,7 @@ class HuskyUr:
     def IfAlignedYZtoXYPlane(self, eps=0.1):
         actual = self.GetActualTCPPose()
         rot = Rotation.from_rotvec(actual[3:]).as_matrix()
+        
         x = np.matmul(rot, [1, 0, 0])
         y = np.matmul(rot, [0, 1, 0])
         z = np.matmul(rot, [0, 0, 1])

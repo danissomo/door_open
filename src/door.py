@@ -64,6 +64,14 @@ class DoorContext:
         rt = (point - self.door.door_handle.GetMiddlePointGlob()).dot(self.door_normal)
         rospy.loginfo(rt)
         return rt > 0
+
+    def ToStr(self):
+        rs =    f"id: {self.door.id}\n \
+                left: {self.is_left}, push: {self.is_push}\n\
+                normal {self.door_normal}\n\
+                global {self.door.door_handle.GetMiddlePointGlob()}\n\
+                relative {self.door.door_handle.GetMiddlePointRel}"
+        return rs
     
     
 
