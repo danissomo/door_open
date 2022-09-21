@@ -9,13 +9,13 @@ import copy
 #ros
 import rospy
 from std_msgs.msg import Bool
-from geometry_msgs.msg import PoseArray
+
 
 #custom
 from husky import Robot
 from utils import ParamProvider
 from door_handle import DoorHandleHandler
-from door import DoorContainer, DoorContext, Door
+from door import DoorContainer, DoorContext
 
 '''
 TODO:
