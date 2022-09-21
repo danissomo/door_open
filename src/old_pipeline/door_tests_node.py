@@ -88,7 +88,7 @@ def OffsetGet():
 
         if arcontainer.Count() > 0:
             arContainerRelBase = StampedArucoRelManipulator.Transform(
-                arcontainer, robot._eefHystory)
+                arcontainer, robot._eef_hystory)
             if(len(arContainerRelBase) == 0):
                 continue
             ar: ArucoRelManipulatorNode = arContainerRelBase[-1]
@@ -125,7 +125,7 @@ def TestLocalization():
         if arcontainer.Count() > 0:
             # robot.OpenGripper()
             arContainerRelBase = StampedArucoRelManipulator.Transform(
-                arcontainer, robot._eefHystory)
+                arcontainer, robot._eef_hystory)
             if(len(arContainerRelBase) == 0):
                 continue
             ar: ArucoRelManipulatorNode = arContainerRelBase[-1]
@@ -403,7 +403,7 @@ def GripHandle():
 
 
 def YoloIntegration():
-    from doorHandle import DoorHandleHandler
+    from door_handle import DoorHandleHandler
     safe_distFdoor = 1.4
     force_limits = [0.5, 0.5, 0.5, math.pi/2, math.pi/2, math.pi/2]
     offsetFOpenedDoor = 0.15

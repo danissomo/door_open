@@ -6,33 +6,33 @@ from nav_msgs.msg import Odometry
 import numpy as np
 class HuskyBase:
     def __init__(self) -> None:
-        self._velocityTopicName = ParamProvider.vel_topic
-        self._velocityTopic = rospy.Publisher(
-            self._velocityTopicName, 
+        self._vel_ropic_n = ParamProvider.vel_topic
+        self._vel_topic_pub = rospy.Publisher(
+            self._vel_ropic_n, 
             Twist, 
             queue_size=1)
 
-        self._odomTopicName = ParamProvider.odom_topic
-        self._odomSub = rospy.Subscriber(
-            self._odomTopicName, Odometry, 
+        self._odom_topic_n = ParamProvider.odom_topic
+        self._odom_sub = rospy.Subscriber(
+            self._odom_topic_n, Odometry, 
             callback=self.OdomCallback, 
             queue_size=1)
             
-        self._baseActualPosition = None
-        self._baseActualTwist = None
-        self._targetTwist = Twist()
+        self._actual_base_pos = None
+        self._actual_base_twist = None
+        self._target_twist = Twist()
 
 
 
     def GetBaseTwist(self):
-        return copy.copy(self._baseActualTwist)
+        return copy.copy(self._actual_base_twist)
 
     def GetBasePosition(self):
-        return copy.copy(self._baseActualPosition)
+        return copy.copy(self._actual_base_pos)
 
     def OdomCallback(self, odom):
-        self._baseActualPosition = odom.pose.pose
-        self._baseActualTwist = odom.twist.twist
+        self._actual_base_pos = odom.pose.pose
+        self._actual_base_twist = odom.twist.twist
 
     def SetBaseSpeed(self, cmd):
         t = TwistStamped()
@@ -43,14 +43,14 @@ class HuskyBase:
         t.twist.angular.y = cmd[4]
         t.twist.angular.z = cmd[5]
         t.header.stamp = rospy.get_rostime()
-        self._velocityTopic.publish(t)
+        self._vel_topic_pub.publish(t)
 
     def BaseSpeedCallBack(self, args):
-        t = copy.copy(self._targetTwist)
-        self._velocityTopic.publish(t)
+        t = copy.copy(self._target_twist)
+        self._vel_topic_pub.publish(t)
 
     def MoveBaseX(self, meters, speed, checkRate_ms=50):
-        self._targetTwist.linear.x = speed
+        self._target_twist.linear.x = speed
         timer = rospy.Timer(rospy.Duration(
             checkRate_ms / 1000), self.BaseSpeedCallBack)
 

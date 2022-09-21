@@ -14,7 +14,7 @@ from geometry_msgs.msg import PoseArray
 #custom
 from husky import Robot
 from utils import ParamProvider
-from doorHandle import DoorHandleHandler
+from door_handle import DoorHandleHandler
 from door import DoorContainer, DoorContext, Door
 
 '''
@@ -56,9 +56,9 @@ class DoorOpen:
         self.doors_stash = DoorContainer()
 
         self.force_limits = [1, 1, 1, math.pi, math.pi, math.pi]
-        self.deltaUnblokDRfromSteady = np.array([0, 0, 0.1])
+        self.dist_of_unlock_door = np.array([0, 0, 0.1])
 
-        self._speedScale = 1
+        self._speed_scale = 1
 
         self.robot = Robot(ParamProvider.ur_ip)
         self.pub_start_move = rospy.Publisher(ParamProvider.base_controller_topic, Bool, queue_size=10)
@@ -80,7 +80,7 @@ class DoorOpen:
         self.robot.ActivateTeachMode()
         self.robot.OpenGripper()
         self.robot.DeactivateTeachMode()
-        self.robot.Fold(1*self._speedScale, 0.5*self._speedScale)
+        self.robot.Fold(1*self._speed_scale, 0.5*self._speed_scale)
         pass
 
     
@@ -195,7 +195,7 @@ class DoorOpen:
             self.robot.GetActualTCPPose()[0:3]
         )
 
-        while (not rospy.is_shutdown()) and (not all(np.fabs(actual_opening_frame - start_opening_frame) >= self.deltaUnblokDRfromSteady)):
+        while (not rospy.is_shutdown()) and (not all(np.fabs(actual_opening_frame - start_opening_frame) >= self.dist_of_unlock_door)):
             self.robot.ForceMode(   self.robot.GetActualTCPPose(), 
                                     SelectorVec().y().z().get(), 
                                     force_vec, 
@@ -218,8 +218,8 @@ class DoorOpen:
         End - 90 degree from start position
         '''
         self.robot.MoveJ(   self.robot.INITIAL_JOINTS,  
-                            self._speedScale * 1, 
-                            self._speedScale * 0.5 )
+                            self._speed_scale * 1, 
+                            self._speed_scale * 0.5 )
 
         searching_pose =  copy.copy( self.robot.INITIAL_JOINTS )
         self.robot.MoveJ( searching_pose, 1, 0.5)

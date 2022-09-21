@@ -22,7 +22,7 @@ from husky_base import HuskyBase
 
 class PositionHystrory:
     def __init__(self, eefPoseGetter, maxlen=1000) -> None:
-        self._eefPoseGetter = eefPoseGetter
+        self._eef_pose_getter = eefPoseGetter
         self.hystory = deque(maxlen=maxlen)
         self._time = "time"
         self._pose = "pose"
@@ -31,8 +31,8 @@ class PositionHystrory:
 
     def callback(self, arg):
         self.hystory.append({self._time: rospy.get_rostime(),
-                             self._pose: self._eefPoseGetter()})
-        manipulatorPose = self._eefPoseGetter()
+                             self._pose: self._eef_pose_getter()})
+        manipulatorPose = self._eef_pose_getter()
         br = tf.TransformBroadcaster()
         cur_time = rospy.get_rostime()
         try:
@@ -76,35 +76,35 @@ class PositionHystrory:
 class Robot(HuskyGripper, HuskyUr, HuskyBase):
     def __init__(self, UR_IP) -> None:
         
-        self.poseLocked = False
+        self.pose_locked = False
 
         HuskyBase.__init__(self)
         HuskyGripper.__init__(self)
         HuskyUr.__init__(self, UR_IP)
 
-        self._eefHystory = PositionHystrory(self.GetActualTCPPose)
+        self._eef_hystory = PositionHystrory(self.GetActualTCPPose)
         
 
     
 
     def OdomCallback(self, odom):
         HuskyBase.OdomCallback(self, odom)
-        if self.poseLocked:
+        if self.pose_locked:
             self.CorrectPositionByTwist()
 
 
 
     def LockPose(self):
         rospy.loginfo("POSE LOCKED")
-        self.poseLocked = True
+        self.pose_locked = True
 
     def PoseUnlock(self):
         rospy.loginfo("POSE UNLOCKED")
-        self.poseLocked = False
+        self.pose_locked = False
 
 
     def CorrectPositionByTwist(self):
-        twist = copy.copy(self._baseActualTwist)
+        twist = copy.copy(self._actual_base_twist)
         pose = self.GetActualTCPPose()
 
         cmd = [twist.linear.y - np.linalg.norm(pose[:2])*twist.angular.z*math.cos(math.atan2(pose[1] - 0.389, pose[0]) + math.pi/2),

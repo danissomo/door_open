@@ -1,7 +1,7 @@
 import copy
 
 from geometry_msgs.msg import PointStamped
-from doorHandle import DoorHandle
+from door_handle import DoorHandle
 from scipy.spatial import KDTree
 import numpy as np
 from utils import PointStampedToNumpy

@@ -97,15 +97,15 @@ class DoorHandleHandler:
         @callback - will be called after self callback, default None
         @is_debug - verbose printing 
         '''
-        self._externalCallback = callback
-        self._tfListener = tf.TransformListener()
-        self.topicToListenName = topicName
-        self._topicSub = rospy.Subscriber( self.topicToListenName, 
+        self._external_clbk = callback
+        self._tf_listener = tf.TransformListener()
+        self._topic_listen_n = topicName
+        self._topic_sub = rospy.Subscriber( self._topic_listen_n, 
                                            PoseArray, 
                                            callback=self.handleSkeletonCallback, 
                                            queue_size=10 )
         
-        self.frameToTransformName = resultFrameName
+        self.frame_trans_n = resultFrameName
         self.actua_door_handle  = DoorHandle() #new interface
 
         self._is_debug = is_debug
@@ -122,24 +122,24 @@ class DoorHandleHandler:
         '''
         if not self._update_flag: return
         wait_for_transform = lambda from_frame, to_frame : \
-                                self._tfListener.waitForTransform( to_frame, from_frame,  rospy.Time.now(), rospy.Duration(4.0))
+                                self._tf_listener.waitForTransform( to_frame, from_frame,  rospy.Time.now(), rospy.Duration(4.0))
 
         def _transform_pose_array(frame, poseArray : PoseArray):
             try:
                 wait_for_transform(poseArray.header.frame_id, frame)
-                tf_function = lambda point : self._tfListener.transformPoint(frame, PointStamped(point = copy.copy(point.position), header = poseArray.header))
+                tf_function = lambda point : self._tf_listener.transformPoint(frame, PointStamped(point = copy.copy(point.position), header = poseArray.header))
                 points_in_base =list (map(tf_function, poseArray.poses)) 
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
                 rospy.logwarn("EXCEPTION IN TF {}".format(e))
                 return None
             return points_in_base
 
-        points_in_base = _transform_pose_array(self.frameToTransformName, poseArray)
+        points_in_base = _transform_pose_array(self.frame_trans_n, poseArray)
         if points_in_base is None: return
         self.actua_door_handle._UpdateRelativeParams(points_in_base)
         if self._is_debug:
             self._Debug()
-        self._externalCallback(self)
+        self._external_clbk(self)
         rospy.loginfo_once("HANDLE DATA CAPTURED")
 
         '''
@@ -183,7 +183,7 @@ class DoorHandleHandler:
 
 
     def DeleteCallback(self):
-        self._externalCallback = lambda doorHandle : 0
+        self._external_clbk = lambda doorHandle : 0
 
 
 
