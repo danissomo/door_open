@@ -55,7 +55,7 @@ class DoorOpen:
         self.door_ctx = DoorContext()
         self.doors_stash = DoorContainer()
 
-        self.force_limits = [1, 1, 1, math.pi, math.pi, math.pi]
+        self.force_limits = [*[1]*3, *[math.pi]*3]
         self.dist_of_unlock_door = np.array([0, 0, 0.1])
 
         self._speed_scale = 1
@@ -116,6 +116,7 @@ class DoorOpen:
                 #debug
                 rospy.logdebug(self.door_ctx.IsPositionPositive(self.robot.GetBasePosition().position))
                 rospy.logdebug(self.door_ctx.door_normal)
+                rospy.logdebug(self.door_ctx.ToStr())
                 assert self.door_ctx.IsPositionPositive(self.robot.GetBasePosition().position) == True
                 self.doors_stash.AddIfNotKnown(self.door_ctx)
                 return self.SolutionProposer(self.ResultEnum.SUCCESS)
@@ -182,18 +183,14 @@ class DoorOpen:
 
     def PreOpenDoor(self):
         if self.door_ctx.IsPull():
-            force_vec = [0, -150, -150, 0, 0, 0 ]
+            force_vec = [0, -150, -150, *[0]*3 ]
         else: 
-            force_vec = [0, -150, 250, 0, 0, 0 ]
+            force_vec = [0, -150,  250, *[0]*3 ]
 
-        start_opening_frame = np.matmul(
-            self.robot.GetActualRotMatrix(),
-            self.robot.GetActualTCPPose()[0:3]
-        )
-        actual_opening_frame = np.matmul(
-            self.robot.GetActualRotMatrix(),
-            self.robot.GetActualTCPPose()[0:3]
-        )
+        start_opening_frame = self.robot.GetActualRotMatrix() @ self.robot.GetActualTCPPose()[0:3]
+        
+        actual_opening_frame = self.robot.GetActualRotMatrix() @ self.robot.GetActualTCPPose()[0:3]
+        
 
         while (not rospy.is_shutdown()) and (not all(np.fabs(actual_opening_frame - start_opening_frame) >= self.dist_of_unlock_door)):
             self.robot.ForceMode(   self.robot.GetActualTCPPose(), 
@@ -201,10 +198,8 @@ class DoorOpen:
                                     force_vec, 
                                     2, 
                                     self.force_limits ) 
-            actual_opening_frame = np.matmul(
-                    self.robot.GetActualRotMatrix(),
-                    self.robot.GetActualTCPPose()[0:3]
-            )
+            actual_opening_frame = self.robot.GetActualRotMatrix() @ self.robot.GetActualTCPPose()[0:3]
+            
 
         self.robot.ForceModeStop()
         return self.SolutionProposer(self.ResultEnum.SUCCESS)
@@ -264,9 +259,9 @@ class DoorOpen:
 
     def RotateHandle(self):
         if self.door_ctx.IsLeft():
-            f = [ -350, 0, 0, 0, 0, -50 ]
+            f = [ -350, *[0]*4 -50 ]
         else:
-            f = [ -350, 0, 0, 0, 0, 50 ]
+            f = [ -350, *[0]*4, 50 ]
         self.robot.PushUntilForce( SelectorVec().x().rz().get(), f, self.force_limits )
 
 
@@ -274,19 +269,10 @@ class DoorOpen:
     def PullWithCompensation(self):
         while (not rospy.is_shutdown()) and np.linalg.norm( np.array(self.robot.GetActualTCPPose()[:2]) ) > self.robot.FM_SAFE_RADIUS_REAR:
             rot = self.robot.GetActualRotMatrix()
-            f_result = np.matmul(   rot, np.array( self.robot.GetActualTCPForce()[:3]) ) - np.array( [ 0, 0, 100 ] )
-            rf = np.matmul( rot, np.array(self.robot.GetActualTCPForce()[3:]) )
-
-            self.robot._rtde_c.forceMode(   self.robot.GetActualTCPPose(),
-                                            SelectorVec().y().z().rx().get(), 
-                                            [   0, 
-                                                -f_result[1], 
-                                                -150, 
-                                                -8*self.robot.GetActualTCPForce()[3], 
-                                                0, 
-                                                0 ], 
-                                            2, 
-                                            self.force_limits )
+            f_result = (rot @ np.array( self.robot.GetActualTCPForce()[:3]) ) - [ 0, 0, 100 ] 
+            rf = rot @ np.array(self.robot.GetActualTCPForce()[3:]) 
+            force = [0, -f_result[1], -150, -8*self.robot.GetActualTCPForce()[3], 0, 0 ]
+            self.robot._rtde_c.forceMode(self.robot.GetActualTCPPose(), SelectorVec().y().z().rx().get(), force, 2, self.force_limits )
         return self.SolutionProposer(self.ResultEnum.SUCCESS)
 
         
@@ -294,11 +280,7 @@ class DoorOpen:
     def ReturnOrientation(self):
         # align with xy plane, need mod for left or right
         while (not rospy.is_shutdown()) and not self.robot.IfAlignedYZtoXYPlane(0.15):
-            self.robot.ForceMode(   self.robot.GetActualTCPPose(), 
-                                    SelectorVec().x().z().rz().get(), 
-                                    [ 50, 0, 0, 0, 0, 30 ], 
-                                    2, 
-                                    self.force_limits )
+            self.robot.ForceMode( self.robot.GetActualTCPPose(), SelectorVec().x().z().rz().get(), [50, *[0]*4, 30], 2, self.force_limits )
 
         self.robot.ForceModeStop()
         return self.SolutionProposer(self.ResultEnum.SUCCESS)

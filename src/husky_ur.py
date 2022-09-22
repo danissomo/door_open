@@ -105,14 +105,12 @@ class HuskyUr:
     def AlignYZtoXYPlane(self, vel=0.25, acc=1.2, asyncro=False):
         actual = self.GetActualTCPPose()
         rot = Rotation.from_rotvec(actual[3:]).as_matrix()
-        x = np.matmul(rot, [1, 0, 0])
-        y = np.matmul(rot, [0, 1, 0])
-        z = np.matmul(rot, [0, 0, 1])
+        x = rot @ np.eye(3)[0]
+        y = rot @ np.eye(3)[1]
+        z = rot @ np.eye(3)[2]
         newRot = Rotation.from_matrix([
-            [0,    y[0]/math.sqrt(y[0]**2 + y[1]**2),
-             z[0]/math.sqrt(z[0]**2 + z[1]**2)],
-            [0,    y[1]/math.sqrt(y[0]**2 + y[1]**2),
-             z[1]/math.sqrt(z[0]**2 + z[1]**2)],
+            [0,    y[0]/math.sqrt(y[0]**2 + y[1]**2), z[0]/math.sqrt(z[0]**2 + z[1]**2)],
+            [0,    y[1]/math.sqrt(y[0]**2 + y[1]**2), z[1]/math.sqrt(z[0]**2 + z[1]**2)],
             [x[2]/math.fabs(x[2]), 0,    0]
         ]).as_rotvec()
         cmd = np.concatenate((actual[0:3], newRot))
@@ -121,26 +119,20 @@ class HuskyUr:
     def AlignXZtoXYPlane(self, vel=0.25, acc=1.2, asyncro=False):
         actual = self.GetActualTCPPose()
         rot = Rotation.from_rotvec(actual[3:]).as_matrix()
-        x = np.matmul(rot, [1, 0, 0])
-        y = np.matmul(rot, [0, 1, 0])
-        z = np.matmul(rot, [0, 0, 1])
+        x = rot @ [1, 0, 0]
+        y = rot @ [0, 1, 0]
+        z = rot @ [0, 0, 1]
         if y[2] < 0:
             newRot = Rotation.from_matrix([
-                [x[0]/math.sqrt(x[0]**2 + x[1]**2), 0, z[0] /
-                 math.sqrt(z[0]**2 + z[1]**2)],
-                [x[1]/math.sqrt(x[0]**2 + x[1]**2), 0,
-                 z[1]/math.sqrt(z[0]**2 + z[1]**2)],
-                [0,                                y[2] /
-                 math.fabs(y[2]),    0]
+                [x[0]/math.sqrt(x[0]**2 + x[1]**2), 0, z[0]/math.sqrt(z[0]**2 + z[1]**2)],
+                [x[1]/math.sqrt(x[0]**2 + x[1]**2), 0, z[1]/math.sqrt(z[0]**2 + z[1]**2)],
+                [0, y[2]/math.fabs(y[2]), 0]
             ]).as_rotvec()
         else:
             newRot = Rotation.from_matrix([
-                [-x[0]/math.sqrt(x[0]**2 + x[1]**2), 0, z[0] /
-                 math.sqrt(z[0]**2 + z[1]**2)],
-                [-x[1]/math.sqrt(x[0]**2 + x[1]**2), 0,
-                 z[1]/math.sqrt(z[0]**2 + z[1]**2)],
-                [0,                                -
-                 y[2]/math.fabs(y[2]),    0]
+                [-x[0]/math.sqrt(x[0]**2 + x[1]**2), 0, z[0]/math.sqrt(z[0]**2 + z[1]**2)],
+                [-x[1]/math.sqrt(x[0]**2 + x[1]**2), 0, z[1]/math.sqrt(z[0]**2 + z[1]**2)],
+                [0, -y[2]/math.fabs(y[2]), 0]
             ]).as_rotvec()
 
         cmd = np.concatenate((actual[0:3], newRot))
@@ -150,17 +142,14 @@ class HuskyUr:
         actual = self.GetActualTCPPose()
         rot = Rotation.from_rotvec(actual[3:]).as_matrix()
         
-        x = np.matmul(rot, [1, 0, 0])
-        y = np.matmul(rot, [0, 1, 0])
-        z = np.matmul(rot, [0, 0, 1])
+        x = rot @ [1, 0, 0]
+        y = rot @ [0, 1, 0]
+        z = rot @ [0, 0, 1]
         return (math.fabs(y[2]) < eps and math.fabs(z[2]) < eps)
 
     def RotvecFromBasis(self, basis):
-        return Rotation.from_matrix([
-            [basis[0][0], basis[1][0], basis[2][0]],
-            [basis[0][1], basis[1][1], basis[2][1]],
-            [basis[0][2], basis[1][2], basis[2][2]],
-        ]).as_rotvec()
+        basis = np.array(basis)
+        return Rotation.from_matrix(basis.T).as_rotvec()
 
     
 
@@ -173,7 +162,7 @@ class HuskyUr:
         def ToTCP(pose, vec):
             v = np.array(vec)
             rot = Rotation.from_rotvec(pose[3:]).as_matrix()
-            return np.matmul(np.linalg.inv(rot), v)
+            return np.linalg.inv(rot) @ v
 
         npF = np.array(force)
         actual = self.GetActualTCPPose()
@@ -186,12 +175,7 @@ class HuskyUr:
         self._rtde_c.forceMode(actual, selector, cmd, 2, limits)
 
     def SoftDetachFromObj(self):
-        self._rtde_c.forceMode(
-            self.GetActualTCPPose(),
-            [1, 1, 1, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            2,
-            [0.5, 0.5, 0.5, math.pi/2, math.pi/2, math.pi/2])
+        self._rtde_c.forceMode(self.GetActualTCPPose(), [*[1]*3, *[0]*3], [0]*6, 2, [*[0.5]*3, *[math.pi/2]*3])
 
         self.OpenGripper()
         self._rtde_c.forceModeStop()
@@ -214,16 +198,12 @@ class HuskyUr:
             diff = -np.array(self.GetActualTCPPose())[3:] + newRot
             f = [0, 0, 0] + list(10*diff[0])
             print(diff[0])
-            self.ForceMode(self.GetActualTCPPose(),
-                           [0, 0, 0, 1, 1, 1],
-                           f,
-                           2,
-                           [2, 2, 2, math.pi, math.pi, math.pi])
+            self.ForceMode(self.GetActualTCPPose(), [*[0]*3, *[1]*3], f, 2, [*[2]*3, *[math.pi]*3])
             time.sleep(0.1)
 
     def ChangeOrientation(self, rotvec, vel = 0.25, acc = 1.2, asyncro = False):
         actual = self.GetActualTCPPose()
-        self.MoveL([actual[0], actual[1], actual[2], rotvec[0], rotvec[1], rotvec[2]], vel, acc, asyncro)
+        self.MoveL([*actual[:3], *rotvec[3:]], vel, acc, asyncro)
 
     
     def MoveL_point_rot(self, pose, orient, vel=0.25, acc=1.2, IK = False, asyncro=False):

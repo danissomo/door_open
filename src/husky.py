@@ -122,9 +122,7 @@ class Robot(HuskyGripper, HuskyUr, HuskyBase):
         handle_pos = ar.aruco.GetHandlePose()
         cmd = list(handle_pos) + list(ar.rotvecAlignedNormal)
         self.MoveL(cmd, 0.2, 0.2)
-        self._rtde_c.forceMode(self.GetActualTCPPose(), 
-                                [0, 0, 0, 1, 0, 1], 
-                                [0, 0, 0, 0, 0, 0], 2, force_limits)
+        self._rtde_c.forceMode(self.GetActualTCPPose(), [*[0]*3, 1, 0, 1], [0]*6, 2, force_limits)
         self.CloseGripper()
         rospy.sleep(1)
         return True

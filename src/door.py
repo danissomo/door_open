@@ -7,6 +7,9 @@ import numpy as np
 from utils import PointStampedToNumpy
 import rospy
 from visualization_msgs.msg import Marker, MarkerArray
+
+from typing import List, Set
+from geometry_msgs.msg import Point
 class Door:
     '''
     Extendable data type for doors
@@ -54,13 +57,11 @@ class DoorContext:
         rt.is_left = self.IsRight()
         rt.is_push = self.IsPull()
         return rt
-    def IsPositionPositive(self, point):
+    def IsPositionPositive(self, point : Point):
         '''
         Cheks side of given point relative to door plane.
         '''
         point = np.array([point.x, point.y, point.z])
-        if isinstance(point, PointStamped):
-            point = PointStampedToNumpy(point)
         rt = (point - self.door.door_handle.GetMiddlePointGlob()).dot(self.door_normal)
         rospy.loginfo(rt)
         return rt > 0
@@ -84,9 +85,9 @@ class DoorContainer:
             self._door_tree = KDTree([dctx.door.door_handle.GetMiddlePointGlob() for dctx in self._door_list])
             self._id_set = { d.door.id for d in self._door_list }
         else:           
-            self._door_list = []
+            self._door_list : List[DoorContext] = []
             self._door_tree : KDTree = None
-            self._id_set = set()
+            self._id_set  = set()
         
         self.marker_pub = rospy.Publisher("handle_markers", MarkerArray, queue_size=10)
         self.timer_marker_maker = rospy.Timer(rospy.Duration(1), self.DrawMarkers)

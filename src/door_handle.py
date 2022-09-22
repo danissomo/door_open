@@ -10,6 +10,7 @@ import numpy as np
 
 from utils import PointStampedToNumpy
 
+from typing import List
 
 
 
@@ -25,7 +26,7 @@ class DoorHandle:
     
     
 
-    def _UpdateGlobalsParams(self, points : list):
+    def _UpdateGlobalsParams(self, points : List[PointStamped]):
         '''
         Global Frame. Building coordinate system from handle keypoints
         Temp Z-axis calulated from 0 an 1 keypoints.
@@ -44,7 +45,7 @@ class DoorHandle:
 
         
 
-    def _UpdateRelativeParams(self, points : list):
+    def _UpdateRelativeParams(self, points : List[PointStamped]):
         '''
         @points - list of PointStamed
         Global Frame. Building coordinate system from handle keypoints.
@@ -90,7 +91,7 @@ class DoorHandle:
 
 
 class DoorHandleHandler:
-    def __init__(self, topicName, resultFrameName, callback = lambda doorHandle : 0, is_debug = False) -> None:
+    def __init__(self, topic_n : str, result_frame_n : str, callback = lambda doorHandle : 0, is_debug = False) -> None:
         '''
         PARAMS:
         @topicName - name of topic with handle data
@@ -99,13 +100,13 @@ class DoorHandleHandler:
         '''
         self._external_clbk = callback
         self._tf_listener = tf.TransformListener()
-        self._topic_listen_n = topicName
+        self._topic_listen_n = topic_n
         self._topic_sub = rospy.Subscriber( self._topic_listen_n, 
                                            PoseArray, 
-                                           callback=self.handleSkeletonCallback, 
+                                           callback=self.HandleSkeletonCallback, 
                                            queue_size=10 )
         
-        self.frame_trans_n = resultFrameName
+        self.frame_trans_n = result_frame_n
         self.actua_door_handle  = DoorHandle() #new interface
 
         self._is_debug = is_debug
@@ -115,7 +116,7 @@ class DoorHandleHandler:
 
             
 
-    def handleSkeletonCallback(self, poseArray : PoseArray):
+    def HandleSkeletonCallback(self, poseArray : PoseArray):
         '''
         Callback that  called every time when data published in topic self.topicToListen.
         Uses tf for transform points from camera to manipulator frame and global framae.
