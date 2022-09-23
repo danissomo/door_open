@@ -62,6 +62,8 @@ class DoorContext:
         Cheks side of given point relative to door plane.
         '''
         point = np.array([point.x, point.y, point.z])
+        rospy.logdebug(point)
+        rospy.logdebug(self.door.door_handle.GetMiddlePointGlob())
         rt = (point - self.door.door_handle.GetMiddlePointGlob()).dot(self.door_normal)
         rospy.loginfo(rt)
         return rt > 0
@@ -169,5 +171,5 @@ class DoorContainer:
                 marker.color.b = random.random()
                 self._handle_colors[door_ctx.door.id] = copy.copy(marker.color)
             else:
-                marker.color = self._handle_colorsp[door_ctx.door.id]
+                marker.color = self._handle_colors[door_ctx.door.id]
         self.marker_pub.publish(markerA)

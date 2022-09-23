@@ -151,6 +151,7 @@ class DoorOpen:
             self.door_ctx.door.door_handle = handle
             self.doors_stash.AddIfNotKnown(self.door_ctx)
         if not self.door_ctx.IsPositionPositive(self.robot.GetBasePosition().position):
+            rospy.logwarn("POSITION NEGATIVE")
             self.door_ctx = self.door_ctx.Negate()
         rospy.logdebug(self.door_ctx.ToStr())
         self.GripHandle()
@@ -163,16 +164,14 @@ class DoorOpen:
             self.DetachFromDoor()
             self.Cancel()
         else:
-            self.ReturnOrientation()
-            self.PullWithCompensation()
+            #self.ReturnOrientation()
+            #self.PullWithCompensation()
 
             # область ответственности прерывается, выполняется отъезд
             self.robot.ForceModeStop()
             self.robot.ActivateTeachMode()
             self.pub_start_move.publish(Bool(True))
-            if self.robot._rtde_r.getSafetyMode() == 0:  
-                input("press")
-                self.robot.MoveBaseX(1, -0.2)
+            self.robot.MoveBaseX(1, -0.2)
             self.WaitController()    
             # требуется завершение в виде отсоединения от двери
             self.DetachFromDoor()
@@ -259,9 +258,9 @@ class DoorOpen:
 
     def RotateHandle(self):
         if self.door_ctx.IsLeft():
-            f = [ -350, *[0]*4 -50 ]
+            f = [ 350, *[0]*4, -50 ]
         else:
-            f = [ -350, *[0]*4, 50 ]
+            f = [ 350, *[0]*4, 50 ]
         self.robot.PushUntilForce( SelectorVec().x().rz().get(), f, self.force_limits )
 
 

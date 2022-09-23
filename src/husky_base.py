@@ -3,6 +3,7 @@ import copy
 from utils import ParamProvider
 from geometry_msgs.msg import Twist, TwistStamped
 from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseStamped
 import numpy as np
 class HuskyBase:
     def __init__(self) -> None:
@@ -17,12 +18,14 @@ class HuskyBase:
             self._odom_topic_n, Odometry, 
             callback=self.OdomCallback, 
             queue_size=1)
-            
+        self._pose_topic_n = "/current_pose"
+        self._pose_topic_sub = rospy.Subscriber(self._pose_topic_n, PoseStamped, callback=self.PoseCallback, queue_size=10)
         self._actual_base_pos = None
         self._actual_base_twist = None
         self._target_twist = Twist()
 
-
+    def PoseCallback(self, pose : PoseStamped):
+        self._actual_base_pos  = pose.pose
 
     def GetBaseTwist(self):
         return copy.copy(self._actual_base_twist)
@@ -31,7 +34,7 @@ class HuskyBase:
         return copy.copy(self._actual_base_pos)
 
     def OdomCallback(self, odom):
-        self._actual_base_pos = odom.pose.pose
+        #self._actual_base_pos = odom.pose.pose
         self._actual_base_twist = odom.twist.twist
 
     def SetBaseSpeed(self, cmd):
