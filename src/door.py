@@ -4,7 +4,6 @@ from geometry_msgs.msg import PointStamped
 from door_handle import DoorHandle
 from scipy.spatial import KDTree
 import numpy as np
-from utils import PointStampedToNumpy
 import rospy
 from visualization_msgs.msg import Marker, MarkerArray
 
@@ -158,6 +157,13 @@ class DoorContainer:
         for door_ctx in  self._door_list:
             door_ctx : DoorContext = door_ctx
             for pointS in door_ctx.door.door_handle.handle_keypoints_global:
+                arrow = copy.deepcopy(marker)
+                arrow.type = Marker.ARROW
+                p1= Point(*door_ctx.door.door_handle.GetMiddlePointGlob())
+                p2 = Point(*(door_ctx.door.door_handle.GetMiddlePointGlob() + door_ctx.door_normal))
+                arrow.points.append(p1)
+                arrow.points.append(p2)
+                arrow.color.r = 1
                 pointS : PointStamped= pointS
                 marker.pose.position.x = pointS.point.x
                 marker.pose.position.y = pointS.point.y
@@ -167,7 +173,9 @@ class DoorContainer:
                 marker.color.r = random.random()
                 marker.color.g = random.random()
                 marker.color.b = random.random()
-                self._handle_colors[door_ctx.door.id] = copy.copy(marker.color)
+                self._handle_colors[door_ctx.door.id] = copy.deepcopy(marker.color)
             else:
                 marker.color = self._handle_colorsp[door_ctx.door.id]
+            markerA.markers.append(copy.deepcopy(marker))
+            markerA.markers.append(copy.deepcopy(arrow))
         self.marker_pub.publish(markerA)

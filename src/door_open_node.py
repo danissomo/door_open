@@ -193,14 +193,9 @@ class DoorOpen:
         
 
         while (not rospy.is_shutdown()) and (not all(np.fabs(actual_opening_frame - start_opening_frame) >= self.dist_of_unlock_door)):
-            self.robot.ForceMode(   self.robot.GetActualTCPPose(), 
-                                    SelectorVec().y().z().get(), 
-                                    force_vec, 
-                                    2, 
-                                    self.force_limits ) 
+            self.robot.ForceMode(self.robot.GetActualTCPPose(), SelectorVec().y().z().get(), force_vec, 2, self.force_limits ) 
             actual_opening_frame = self.robot.GetActualRotMatrix() @ self.robot.GetActualTCPPose()[0:3]
             
-
         self.robot.ForceModeStop()
         return self.SolutionProposer(self.ResultEnum.SUCCESS)
 

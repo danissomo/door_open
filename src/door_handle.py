@@ -24,7 +24,18 @@ class DoorHandle:
         self.coordinate_system_rel = None           #array of lenght 3 with vectors (numpy) in relative coordinates
         self.handle_keypoints_rel = None            #array of PointStamped class in any relative coordinates
     
-    
+
+
+    def _CSFromPoints(self, points: List[PointStamped]):
+        zAxisTemp = np.diff([PointStampedToNumpy(points[i]) for i in [1, 0]], axis = 0)[0]
+        yAxis = np.diff([PointStampedToNumpy(points[i]) for i in [2, 1]], axis = 0)[0]
+        xAxis = np.cross( zAxisTemp, yAxis)
+        zAxis = np.cross(xAxis, yAxis)
+        rt = [xAxis, yAxis, zAxis]
+        for i, v in enumerate(rt):
+            rt[i] /= np.linalg.norm(v)
+        return rt
+
 
     def _UpdateGlobalsParams(self, points : List[PointStamped]):
         '''
@@ -35,15 +46,9 @@ class DoorHandle:
         Real Z - cross product of X and Y.
         '''
         self.handle_keypoints_global = copy.copy(points)
-        zAxisTemp = PointStampedToNumpy(points[0]) - PointStampedToNumpy(points[1])
-        yAxis = PointStampedToNumpy(points[1]) - PointStampedToNumpy(points[2])
-        xAxis = np.cross( zAxisTemp, yAxis)
-        zAxis = np.cross(xAxis, yAxis)
-        self.coordinate_system_global = [xAxis, yAxis, zAxis]
-        for i, v in enumerate(self.coordinate_system_global):
-            self.coordinate_system_global[i] /= np.linalg.norm(v)
+        self.coordinate_system_global  = self._CSFromPoints(self.handle_keypoints_global)
 
-        
+
 
     def _UpdateRelativeParams(self, points : List[PointStamped]):
         '''
@@ -54,37 +59,30 @@ class DoorHandle:
         Temp Z-axis calulated from 0 an 1 keypoints.
         '''
         self.handle_keypoints_rel = copy.copy(points)
-        zAxisTemp = PointStampedToNumpy(points[0]) - PointStampedToNumpy(points[1])
-        yAxis = PointStampedToNumpy(points[1]) - PointStampedToNumpy(points[2])
-        xAxis = np.cross( zAxisTemp, yAxis)
-        zAxis = np.cross(xAxis, yAxis)
-        self.coordinate_system_rel = [xAxis, yAxis, zAxis]
-        for i, v in enumerate(self.coordinate_system_rel):
-            self.coordinate_system_rel[i] /= np.linalg.norm(v)
+        self.coordinate_system_rel = self._CSFromPoints(self.handle_keypoints_rel)
 
-        
 
-    def GetMiddlePointGlob(self):
+
+    def _GetMiddlePoint(self, points):
+        if points is None:
+            import sys
+            raise AttributeError("Handle keypoints is None").with_traceback(sys.exc_info()[2])
+        rt = np.mean([PointStampedToNumpy(points[i]) for i in [1,2]], axis=0)
+        return rt
+
+
+
+    def GetMiddlePointGlob(self) -> np.ndarray:
         '''
         calculate point for determine door in map
         '''
-        if self.handle_keypoints_global is None:
-            import sys
-            raise AttributeError("Handle keypoints is None").with_traceback(sys.exc_info()[2])
-        rt = (    PointStampedToNumpy(self.handle_keypoints_global[1])
-                + PointStampedToNumpy(self.handle_keypoints_global[2]) ) / 2.0
-        return rt
+        return self._GetMiddlePoint(self.handle_keypoints_global)
     
     def GetMiddlePointRel(self):
         '''
         calculate point that used for grabbing handle, middle between 2 keypoints
         '''
-        if self.handle_keypoints_rel is None:
-            import sys
-            raise AttributeError("Handle keypoints is None").with_traceback(sys.exc_info()[2])
-        rt = (    PointStampedToNumpy(self.handle_keypoints_rel[1])
-                + PointStampedToNumpy(self.handle_keypoints_rel[2]) ) / 2.0
-        return rt
+        return self._GetMiddlePoint(self.handle_keypoints_rel)
 
 
 
