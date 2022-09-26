@@ -102,7 +102,7 @@ class DoorHandleHandler:
         self._topic_sub = rospy.Subscriber( self._topic_listen_n, 
                                            PoseArray, 
                                            callback=self.HandleSkeletonCallback, 
-                                           queue_size=10 )
+                                           queue_size=20 )
         
         self.frame_trans_n = result_frame_n
         self.actua_door_handle  = DoorHandle() #new interface
@@ -202,7 +202,7 @@ class DoorHandleHandler:
     def WaitData(self, timeout = 1):
         start_time = time.time()
         while (self.actua_door_handle.coordinate_system_rel is None) and time.time() - start_time <= timeout:
-            rospy.sleep(0.001)
+            rospy.sleep(0.1)
         return time.time() - start_time <= timeout
     
 

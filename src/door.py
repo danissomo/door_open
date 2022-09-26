@@ -61,6 +61,8 @@ class DoorContext:
         Cheks side of given point relative to door plane.
         '''
         point = np.array([point.x, point.y, point.z])
+        rospy.logdebug(point)
+        rospy.logdebug(self.door.door_handle.GetMiddlePointGlob())
         rt = (point - self.door.door_handle.GetMiddlePointGlob()).dot(self.door_normal)
         rospy.loginfo(rt)
         return rt > 0
