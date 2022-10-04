@@ -56,23 +56,25 @@ class DoorOpen:
         self.doors_stash = DoorContainer()
 
         self.force_limits = [*[1]*3, *[math.pi]*3]
-        self.dist_of_unlock_door = np.array([0, 0, 0.1])
+        self.dist_of_unlock_door = np.array([0, 0, 0.05])
 
         self._speed_scale = 1
 
         self.robot = Robot(ParamProvider.ur_ip)
-        self.pub_start_move = rospy.Publisher(ParamProvider.base_controller_topic, Bool, queue_size=10)
+        self.pub_start_opening = rospy.Publisher(ParamProvider.start_opening, Bool, queue_size=10)
         self.door_handle_handler =  DoorHandleHandler(ParamProvider.yolo_topic, "ur_arm_base")
         
         self.robot.ForceModeStop()
         self.robot.ActivateTeachMode()
         self.robot.OpenGripper()
 
+        self.sub_start_manipulator = rospy.Subscriber(ParamProvider.start_manipulator_topic, Bool, callback=self.NewPipeline, queue_size=10)
+        self.pub_start_passing = rospy.Publisher(ParamProvider.sart_passing_topic, Bool, queue_size=10)
         self._is_debug = False
-        while not rospy.is_shutdown():
-            rospy.loginfo("!!FOR START PRESS ENTER!!")
-            input()
-            self.NewPipeline()
+        # while not rospy.is_shutdown():
+        #     rospy.loginfo("!!FOR START PRESS ENTER!!")
+        #     input()
+        #     self.NewPipeline()
 
 
     def Init(self):
@@ -102,8 +104,9 @@ class DoorOpen:
 
 
     def Dialog(self):
-        inp = [ input("Is left? y/n: "), 
-                input("Is push? y/n: ") ]
+        # inp = [ input("Is left? y/n: "), 
+        #         input("Is push? y/n: ") ]
+        inp = ['n', 'n']
         self.door_ctx.is_left = inp[0] == 'y' or inp[0] == 'Y'
         self.door_ctx.is_push = inp[1] == 'y' or inp[1] == 'Y'
         rs = self.FindDoorHandle()
@@ -120,12 +123,14 @@ class DoorOpen:
                 assert self.door_ctx.IsPositionPositive(self.robot.GetBasePosition().position) == True
                 self.doors_stash.AddIfNotKnown(self.door_ctx)
                 return self.SolutionProposer(self.ResultEnum.SUCCESS)
+            else:
+                return self.SolutionProposer(self.ResultEnum.NO_OBJECTS_FOUND)
         else:
             return rs
         
 
 
-    def NewPipeline(self):
+    def NewPipeline(self, args = None):
         '''
         New Edition of pipeline with context and others
         '''
@@ -157,25 +162,20 @@ class DoorOpen:
         self.GripHandle()
         self.RotateHandle()
         self.PreOpenDoor()
+        self.robot.ForceModeStop()
+        self.robot.ActivateTeachMode()
         if self.door_ctx.IsPush():
-            self.robot.ForceModeStop()
-            self.robot.ActivateTeachMode()
-            self.robot.MoveBaseX(1.4, 0.2)
+            self.pub_start_opening.publish(Bool(True))
+            self.WaitController()
             self.DetachFromDoor()
             self.Cancel()
         else:
             #self.ReturnOrientation()
             #self.PullWithCompensation()
-
-            # область ответственности прерывается, выполняется отъезд
-            self.robot.ForceModeStop()
-            self.robot.ActivateTeachMode()
-            self.pub_start_move.publish(Bool(True))
-            self.robot.MoveBaseX(1, -0.2)
+            self.pub_start_opening.publish(Bool(True))
             self.WaitController()    
-            # требуется завершение в виде отсоединения от двери
             self.DetachFromDoor()
-            self.Cancel()
+            self.pub_start_passing.publish(Bool(True))
         return self.SolutionProposer(self.ResultEnum.SUCCESS)
         
 
@@ -215,7 +215,8 @@ class DoorOpen:
         self.door_handle_handler.ClearData()
         self.door_handle_handler.WaitData(2)
         self.door_handle_handler.ClearData()
-        delta_q = -0.17 if self.door_ctx.IsLeft() else 0.17
+        rospy.sleep(3)
+        delta_q = 0.25 if self.door_ctx.IsLeft() else -0.25
         # manipulator left +
         #manipulator right -
         while (not rospy.is_shutdown()) and math.fabs(self.robot.GetActualQ()[0] - self.robot.INITIAL_JOINTS[0])  <= math.pi/2:
@@ -224,6 +225,9 @@ class DoorOpen:
                  return self.SolutionProposer(self.ResultEnum.SUCCESS)
             searching_pose[0] += delta_q
             self.robot.MoveJ(searching_pose)
+        searching_pose[0] += delta_q
+        self.robot.MoveJ(searching_pose)
+        rospy.sleep(5) 
         return self.SolutionProposer(self.ResultEnum.NO_OBJECTS_FOUND)
 
 
@@ -282,12 +286,14 @@ class DoorOpen:
         
 
     def DetachFromDoor(self):
-        pass
+        self.robot.ActivateTeachMode()
+        self.robot.OpenGripper()
+        self.robot.Fold()
 
 
 
     def WaitController(self):
-        input()
+        rospy.wait_for_message(ParamProvider.finish_manipulator, Bool, rospy.Duration(1000))
 
 
 

@@ -37,7 +37,10 @@ class ParamProvider:
     odom_topic              : str = rospy.get_param("~odom_topic", "/husky_velocity_controller/odom")
     vel_topic               : str = rospy.get_param("~vel_topic", "/husky_velocity_controller/cmd_vel")
     yolo_topic              : str = rospy.get_param("~yolo_topic", "/handle/points_yolo")
-    base_controller_topic   : str = rospy.get_param("~base_controller_topic", "/some_topic")
+    start_opening           : str = rospy.get_param("~base_controller_topic", "/start_opening")
+    start_manipulator_topic : str = rospy.get_param("~start_manipulator_topic", "/start_manipulator")
+    finish_manipulator      : str = rospy.get_param("~finish_manipulator_topic", "/finish_manipulator")
+    sart_passing_topic      : str = rospy.get_param("~start_passing_topic", "/start_passing")
     ur_ip                   : str = rospy.get_param("~ur_ip", "192.168.131.40")
     rs_frame_name           : str = rospy.get_param("~rs_frame_name", "rs_camera")
     rs_frame                : tuple = (

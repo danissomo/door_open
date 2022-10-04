@@ -174,7 +174,7 @@ class DoorHandleHandler:
 
 
     def GetActualDoorHandle(self):
-        cp_h = copy.copy(self.actua_door_handle)
+        cp_h = copy.deepcopy(self.actua_door_handle)
         if cp_h.coordinate_system_rel is None:
             return None
         return cp_h

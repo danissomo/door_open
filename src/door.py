@@ -177,7 +177,7 @@ class DoorContainer:
                 marker.color.b = random.random()
                 self._handle_colors[door_ctx.door.id] = copy.deepcopy(marker.color)
             else:
-                marker.color = self._handle_colorsp[door_ctx.door.id]
+                marker.color = self._handle_colors[door_ctx.door.id]
             markerA.markers.append(copy.deepcopy(marker))
             markerA.markers.append(copy.deepcopy(arrow))
         self.marker_pub.publish(markerA)
