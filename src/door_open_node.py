@@ -17,11 +17,13 @@ from utils import ParamProvider
 from door_handle import DoorHandleHandler
 from door import DoorContainer, DoorContext
 
+#catkin
+from door_tests.srv import OpenDoor, OpenDoorResponce, DetachGripper, DetachGripperResponce
+
 '''
 TODO:
-1. Add possibility for using door context
-2. Saving and loading door from container
-3. Find new door and ask. 
+1. Integrate to Service-based handle finder
+2. Remake to service/action
 '''
 
 
@@ -71,10 +73,7 @@ class DoorOpen:
         self.sub_start_manipulator = rospy.Subscriber(ParamProvider.start_manipulator_topic, Bool, callback=self.NewPipeline, queue_size=10)
         self.pub_start_passing = rospy.Publisher(ParamProvider.sart_passing_topic, Bool, queue_size=10)
         self._is_debug = False
-        # while not rospy.is_shutdown():
-        #     rospy.loginfo("!!FOR START PRESS ENTER!!")
-        #     input()
-        #     self.NewPipeline()
+ 
 
 
     def Init(self):
@@ -111,8 +110,7 @@ class DoorOpen:
         self.door_ctx.is_push = inp[1] == 'y' or inp[1] == 'Y'
         rs = self.FindDoorHandle()
         if rs.resultEnum == self.ResultEnum.SUCCESS:
-            self.door_handle_handler.ClearData()
-            self.door_handle_handler.WaitData(10)
+            self.door_handle_handler.UpdateHandle()
             self.door_ctx.door.door_handle =  self.door_handle_handler.GetActualDoorHandle()
             if self.door_ctx.door.door_handle.coordinate_system_global is not None:
                 self.door_ctx.door_normal = - self.door_ctx.door.door_handle.coordinate_system_global[2]
@@ -150,7 +148,7 @@ class DoorOpen:
                 return rs
         else:
             self.FindDoorHandle()
-            rospy.sleep(2)
+            self.door_handle_handler.UpdateHandle()
             handle = self.door_handle_handler.GetActualDoorHandle()
             self.door_ctx = self.doors_stash.GetNearestCtx(handle.GetMiddlePointGlob())
             self.door_ctx.door.door_handle = handle
@@ -212,22 +210,17 @@ class DoorOpen:
 
         searching_pose =  copy.copy( self.robot.INITIAL_JOINTS )
         self.robot.MoveJ( searching_pose, 1, 0.5)
-        self.door_handle_handler.ClearData()
-        self.door_handle_handler.WaitData(2)
-        self.door_handle_handler.ClearData()
-        rospy.sleep(3)
+        self.door_handle_handler.UpdateHandle()
         delta_q = 0.25 if self.door_ctx.IsLeft() else -0.25
         # manipulator left +
         #manipulator right -
         while (not rospy.is_shutdown()) and math.fabs(self.robot.GetActualQ()[0] - self.robot.INITIAL_JOINTS[0])  <= math.pi/2:
-            self.door_handle_handler.ClearData()
-            if self.door_handle_handler.WaitData(3):
+            if self.door_handle_handler.UpdateHandle():
                  return self.SolutionProposer(self.ResultEnum.SUCCESS)
             searching_pose[0] += delta_q
             self.robot.MoveJ(searching_pose)
         searching_pose[0] += delta_q
         self.robot.MoveJ(searching_pose)
-        rospy.sleep(5) 
         return self.SolutionProposer(self.ResultEnum.NO_OBJECTS_FOUND)
 
 

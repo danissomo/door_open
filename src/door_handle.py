@@ -11,7 +11,7 @@ import numpy as np
 from utils import PointStampedToNumpy
 
 from typing import List
-
+from handle_keypoints_msgs.srv import FindHandle, FindHandleResponse
 
 
 class DoorHandle:
@@ -99,10 +99,10 @@ class DoorHandleHandler:
         self._external_clbk = callback
         self._tf_listener = tf.TransformListener()
         self._topic_listen_n = topic_n
-        self._topic_sub = rospy.Subscriber( self._topic_listen_n, 
-                                           PoseArray, 
-                                           callback=self.HandleSkeletonCallback, 
-                                           queue_size=20 )
+        # self._topic_sub = rospy.Subscriber( self._topic_listen_n, 
+        #                                    PoseArray, 
+        #                                    callback=self.HandleSkeletonCallback, 
+        #                                    queue_size=20 )
         
         self.frame_trans_n = result_frame_n
         self.actua_door_handle  = DoorHandle() #new interface
@@ -110,6 +110,8 @@ class DoorHandleHandler:
         self._is_debug = is_debug
 
         self._update_flag = True 
+
+        self.findHandle = rospy.ServiceProxy("FindHandle", FindHandle)
 
 
             
@@ -212,7 +214,13 @@ class DoorHandleHandler:
         self.actua_door_handle = DoorHandle()
         self.StartUpdateHandle()
 
-
+    def UpdateHandle(self):
+        rs : FindHandleResponse = self.findHandle()
+        if len(rs.keypoints) > 0:
+            self.HandleSkeletonCallback(rs.keypoints)
+            return True
+        else:
+            return False
 
 
 if __name__ == "__main__":

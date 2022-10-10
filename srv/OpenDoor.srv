@@ -1,0 +1,7 @@
+#input
+string door_type
+string action_type
+---
+#output
+bool result
+string debug
