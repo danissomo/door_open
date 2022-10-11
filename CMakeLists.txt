@@ -58,6 +58,10 @@ add_service_files(
   FILES
   OpenDoor.srv
   DetachGripper.srv
+  GetToolPose.srv
+  GetJointPose.srv
+  MoveL.srv
+  MoveJ.srv
 )
 
 ## Generate actions in the 'action' folder

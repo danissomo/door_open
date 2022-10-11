@@ -1,0 +1,7 @@
+# input
+float[] cmd
+float speed
+float acc
+--- 
+# output
+int result

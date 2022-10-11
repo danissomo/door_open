@@ -63,15 +63,17 @@ class DoorOpen:
         self._speed_scale = 1
 
         self.robot = Robot(ParamProvider.ur_ip)
-        self.pub_start_opening = rospy.Publisher(ParamProvider.start_opening, Bool, queue_size=10)
         self.door_handle_handler =  DoorHandleHandler(ParamProvider.yolo_topic, "ur_arm_base")
         
         self.robot.ForceModeStop()
         self.robot.ActivateTeachMode()
         self.robot.OpenGripper()
 
-        self.sub_start_manipulator = rospy.Subscriber(ParamProvider.start_manipulator_topic, Bool, callback=self.NewPipeline, queue_size=10)
+        #self.sub_start_manipulator = rospy.Subscriber(ParamProvider.start_manipulator_topic, Bool, callback=self.NewPipeline, queue_size=10)
+        self.pub_start_opening = rospy.Publisher(ParamProvider.start_opening, Bool, queue_size=10)
         self.pub_start_passing = rospy.Publisher(ParamProvider.sart_passing_topic, Bool, queue_size=10)
+        self.open_service = rospy.Service("OpenDoor", OpenDoor, self.NewPipeline)
+        self.detach_service = rospy.Service("DetachGripper", DetachGripper, self.DetachFromDoor)
         self._is_debug = False
  
 
@@ -102,7 +104,7 @@ class DoorOpen:
 
 
 
-    def Dialog(self):
+    def Dialog(self, is_left, is_push):
         # inp = [ input("Is left? y/n: "), 
         #         input("Is push? y/n: ") ]
         inp = ['n', 'n']
@@ -128,24 +130,19 @@ class DoorOpen:
         
 
 
-    def NewPipeline(self, args = None):
+    def NewPipeline(self, door_type, action_type, *args):
+        
         '''
         New Edition of pipeline with context and others
         '''
         self.Init()
-        if self._is_debug:
-            self.robot.ManualPose()
-            self.robot.AlignXZtoXYPlane()
-            rospy.sleep()
-        else:
-            pass # выход в промежуточную точку
         robot_pos = self.robot.GetBasePosition()
         nearest = self.doors_stash.GetNearestCtx(robot_pos.position, 1.0)
         if nearest is None:
-            rs = self.Dialog()
+            rs = self.Dialog(door_type == 'left', action_type == 'push')
             if rs.resultEnum == self.ResultEnum.NO_OBJECTS_FOUND:
                 rospy.logwarn("NO OBJECTS")
-                return rs
+                return OpenDoorResponce(False, "NO OBJECTS")
         else:
             self.FindDoorHandle()
             self.door_handle_handler.UpdateHandle()
@@ -166,7 +163,7 @@ class DoorOpen:
             self.pub_start_opening.publish(Bool(True))
             self.WaitController()
             self.DetachFromDoor()
-            self.Cancel()
+            self.pub_start_passing.publish(Bool(True))
         else:
             #self.ReturnOrientation()
             #self.PullWithCompensation()
@@ -174,7 +171,7 @@ class DoorOpen:
             self.WaitController()    
             self.DetachFromDoor()
             self.pub_start_passing.publish(Bool(True))
-        return self.SolutionProposer(self.ResultEnum.SUCCESS)
+        return OpenDoorResponce(True, "SUCCESS")
         
 
 
@@ -278,7 +275,7 @@ class DoorOpen:
 
         
 
-    def DetachFromDoor(self):
+    def DetachFromDoor(self, *args):
         self.robot.ActivateTeachMode()
         self.robot.OpenGripper()
         self.robot.Fold()
