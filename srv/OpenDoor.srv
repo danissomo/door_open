@@ -1,9 +1,0 @@
-#input
-string door_type
-string action_type
-geometry_msgs/PointStamped estima
-string debug
----
-#output
-bool result
-string debug

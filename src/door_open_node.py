@@ -18,7 +18,7 @@ from door_handle import DoorHandleHandler
 from door import DoorContainer, DoorContext
 
 #catkin
-from door_tests.srv import OpenDoor, OpenDoorResponce, DetachGripper, DetachGripperResponce
+from communication_msgs.srv import OpenDoor, OpenDoorResponce, DetachGripper, DetachGripperResponce
 
 '''
 TODO:
@@ -105,11 +105,8 @@ class DoorOpen:
 
 
     def Dialog(self, is_left, is_push):
-        # inp = [ input("Is left? y/n: "), 
-        #         input("Is push? y/n: ") ]
-        inp = ['n', 'n']
-        self.door_ctx.is_left = inp[0] == 'y' or inp[0] == 'Y'
-        self.door_ctx.is_push = inp[1] == 'y' or inp[1] == 'Y'
+        self.door_ctx.is_left = is_left
+        self.door_ctx.is_push = is_push
         rs = self.FindDoorHandle()
         if rs.resultEnum == self.ResultEnum.SUCCESS:
             self.door_handle_handler.UpdateHandle()
@@ -279,6 +276,7 @@ class DoorOpen:
         self.robot.ActivateTeachMode()
         self.robot.OpenGripper()
         self.robot.Fold()
+        return DetachGripperResponce(True, "SUCCESS")
 
 
 

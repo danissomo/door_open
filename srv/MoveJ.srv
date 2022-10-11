@@ -1,7 +1,7 @@
 # input
-float[] cmd
-float speed
-float acc
+float64[] cmd
+float64 speed
+float64 acc
 --- 
 # output
-int result
+int16 result
