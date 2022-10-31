@@ -128,6 +128,7 @@ class DoorHandleHandler:
         def _transform_pose_array(frame, poseArray : PoseArray):
             try:
                 wait_for_transform(poseArray.header.frame_id, frame)
+                rospy.sleep(0.1)
                 tf_function = lambda point : self._tf_listener.transformPoint(frame, PointStamped(point = copy.copy(point.position), header = poseArray.header))
                 points_in_base =list (map(tf_function, poseArray.poses)) 
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
@@ -136,6 +137,9 @@ class DoorHandleHandler:
             return points_in_base
 
         points_in_base = _transform_pose_array(self.frame_trans_n, poseArray)
+        if np.linalg.norm( PointStampedToNumpy( points_in_base[0])) >=5:
+            rospy.loginfo('NONE')
+            return None
         if points_in_base is None: return
         self.actua_door_handle._UpdateRelativeParams(points_in_base)
         if self._is_debug:
@@ -178,6 +182,7 @@ class DoorHandleHandler:
     def GetActualDoorHandle(self):
         cp_h = copy.deepcopy(self.actua_door_handle)
         if cp_h.coordinate_system_rel is None:
+            rospy.loginfo("relative coord system is none")
             return None
         return cp_h
 
@@ -216,7 +221,7 @@ class DoorHandleHandler:
 
     def UpdateHandle(self):
         rs : FindHandleResponse = self.findHandle()
-        if len(rs.keypoints) > 0:
+        if len(rs.keypoints.poses) > 0:
             self.HandleSkeletonCallback(rs.keypoints)
             return True
         else:

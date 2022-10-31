@@ -72,7 +72,7 @@ class DoorContext:
                 left: {self.is_left}, push: {self.is_push}\n\
                 normal {self.door_normal}\n\
                 global {self.door.door_handle.GetMiddlePointGlob()}\n\
-                relative {self.door.door_handle.GetMiddlePointRel}"
+                relative {self.door.door_handle.GetMiddlePointRel()}"
         return rs
     
     
@@ -120,7 +120,9 @@ class DoorContainer:
     def GetNearestCtx(self, position, eps = 0.5):
         if self._door_tree is None:
             return None
+        return None
         d, i = self._door_tree.query(position)
+        
         if np.linalg.norm(d) < eps:
             return self._door_list[i]
         else:

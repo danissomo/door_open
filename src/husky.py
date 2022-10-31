@@ -30,11 +30,11 @@ class PositionHystrory:
         
 
     def callback(self, arg):
-        self.hystory.append({self._time: rospy.get_rostime(),
+        self.hystory.append({self._time: rospy.Time.now(),
                              self._pose: self._eef_pose_getter()})
         manipulatorPose = self._eef_pose_getter()
         br = tf.TransformBroadcaster()
-        cur_time = rospy.get_rostime()
+        cur_time = rospy.Time.now()
         try:
             br.sendTransform(
                 (manipulatorPose[0], manipulatorPose[1], manipulatorPose[2]),

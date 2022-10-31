@@ -45,7 +45,7 @@ class HuskyBase:
         t.twist.angular.x = cmd[3]
         t.twist.angular.y = cmd[4]
         t.twist.angular.z = cmd[5]
-        t.header.stamp = rospy.get_rostime()
+        t.header.stamp = rospy.Time.now()
         self._vel_topic_pub.publish(t)
 
     def BaseSpeedCallBack(self, args):

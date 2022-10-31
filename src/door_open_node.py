@@ -18,7 +18,7 @@ from door_handle import DoorHandleHandler
 from door import DoorContainer, DoorContext
 
 #catkin
-from communication_msgs.srv import OpenDoor, OpenDoorResponce, DetachGripper, DetachGripperResponce
+from communication_msgs.srv import OpenDoor, OpenDoorResponse, DetachGripper, DetachGripperResponse
 
 '''
 TODO:
@@ -72,9 +72,11 @@ class DoorOpen:
         #self.sub_start_manipulator = rospy.Subscriber(ParamProvider.start_manipulator_topic, Bool, callback=self.NewPipeline, queue_size=10)
         self.pub_start_opening = rospy.Publisher(ParamProvider.start_opening, Bool, queue_size=10)
         self.pub_start_passing = rospy.Publisher(ParamProvider.sart_passing_topic, Bool, queue_size=10)
-        self.open_service = rospy.Service("OpenDoor", OpenDoor, self.NewPipeline)
+        self.open_service = rospy.Service('OpenDoor', OpenDoor, self.NewPipeline)
         self.detach_service = rospy.Service("DetachGripper", DetachGripper, self.DetachFromDoor)
         self._is_debug = False
+        rospy.spin()
+
  
 
 
@@ -110,6 +112,7 @@ class DoorOpen:
         rs = self.FindDoorHandle()
         if rs.resultEnum == self.ResultEnum.SUCCESS:
             self.door_handle_handler.UpdateHandle()
+            self.door_handle_handler.UpdateHandle()
             self.door_ctx.door.door_handle =  self.door_handle_handler.GetActualDoorHandle()
             if self.door_ctx.door.door_handle.coordinate_system_global is not None:
                 self.door_ctx.door_normal = - self.door_ctx.door.door_handle.coordinate_system_global[2]
@@ -117,7 +120,7 @@ class DoorOpen:
                 rospy.logdebug(self.door_ctx.IsPositionPositive(self.robot.GetBasePosition().position))
                 rospy.logdebug(self.door_ctx.door_normal)
                 rospy.logdebug(self.door_ctx.ToStr())
-                assert self.door_ctx.IsPositionPositive(self.robot.GetBasePosition().position) == True
+                #assert self.door_ctx.IsPositionPositive(self.robot.GetBasePosition().position) == True
                 self.doors_stash.AddIfNotKnown(self.door_ctx)
                 return self.SolutionProposer(self.ResultEnum.SUCCESS)
             else:
@@ -127,8 +130,9 @@ class DoorOpen:
         
 
 
-    def NewPipeline(self, door_type, action_type, *args):
-        
+    def NewPipeline(self, door_msg : OpenDoor, *args):
+        door_type = door_msg.door_type
+        action_type = door_msg.action_type
         '''
         New Edition of pipeline with context and others
         '''
@@ -139,7 +143,7 @@ class DoorOpen:
             rs = self.Dialog(door_type == 'left', action_type == 'push')
             if rs.resultEnum == self.ResultEnum.NO_OBJECTS_FOUND:
                 rospy.logwarn("NO OBJECTS")
-                return OpenDoorResponce(False, "NO OBJECTS")
+                return OpenDoorResponse(False, "NO OBJECTS")
         else:
             self.FindDoorHandle()
             self.door_handle_handler.UpdateHandle()
@@ -158,6 +162,7 @@ class DoorOpen:
         self.robot.ActivateTeachMode()
         if self.door_ctx.IsPush():
             self.pub_start_opening.publish(Bool(True))
+            return OpenDoorResponse(True, "success")
             self.WaitController()
             self.DetachFromDoor()
             self.pub_start_passing.publish(Bool(True))
@@ -165,10 +170,11 @@ class DoorOpen:
             #self.ReturnOrientation()
             #self.PullWithCompensation()
             self.pub_start_opening.publish(Bool(True))
+            return OpenDoorResponse(True, "success")
             self.WaitController()    
             self.DetachFromDoor()
             self.pub_start_passing.publish(Bool(True))
-        return OpenDoorResponce(True, "SUCCESS")
+        return OpenDoorResponce(True, "success")
         
 
 
@@ -182,11 +188,12 @@ class DoorOpen:
         
         actual_opening_frame = self.robot.GetActualRotMatrix() @ self.robot.GetActualTCPPose()[0:3]
         
-
-        while (not rospy.is_shutdown()) and (not all(np.fabs(actual_opening_frame - start_opening_frame) >= self.dist_of_unlock_door)):
-            self.robot.ForceMode(self.robot.GetActualTCPPose(), SelectorVec().y().z().get(), force_vec, 2, self.force_limits ) 
+        while (not rospy.is_shutdown()) and (np.linalg.norm(actual_opening_frame - start_opening_frame) <= 0.1):
+        #while (not rospy.is_shutdown()) and (not all(np.fabs(actual_opening_frame - start_opening_frame) >= self.dist_of_unlock_door)):
+            self.robot.ForceMode(self.robot.GetActualTCPPose(), SelectorVec().y().z().rz().get(), force_vec, 2, self.force_limits ) 
             actual_opening_frame = self.robot.GetActualRotMatrix() @ self.robot.GetActualTCPPose()[0:3]
-            
+        self.robot.ForceMode(self.robot.GetActualTCPPose(), [1]*6, [0], 2, self.force_limits )
+        rospy.sleep(3)
         self.robot.ForceModeStop()
         return self.SolutionProposer(self.ResultEnum.SUCCESS)
 
@@ -210,11 +217,13 @@ class DoorOpen:
         #manipulator right -
         while (not rospy.is_shutdown()) and math.fabs(self.robot.GetActualQ()[0] - self.robot.INITIAL_JOINTS[0])  <= math.pi/2:
             if self.door_handle_handler.UpdateHandle():
-                 return self.SolutionProposer(self.ResultEnum.SUCCESS)
+                searching_pose[0] += delta_q
+                self.robot.MoveJ(searching_pose)
+                rospy.sleep(1)
+                return self.SolutionProposer(self.ResultEnum.SUCCESS)
             searching_pose[0] += delta_q
             self.robot.MoveJ(searching_pose)
-        searching_pose[0] += delta_q
-        self.robot.MoveJ(searching_pose)
+        
         return self.SolutionProposer(self.ResultEnum.NO_OBJECTS_FOUND)
 
 
@@ -266,7 +275,7 @@ class DoorOpen:
         # align with xy plane, need mod for left or right
         while (not rospy.is_shutdown()) and not self.robot.IfAlignedYZtoXYPlane(0.15):
             self.robot.ForceMode( self.robot.GetActualTCPPose(), SelectorVec().x().z().rz().get(), [50, *[0]*4, 30], 2, self.force_limits )
-
+        
         self.robot.ForceModeStop()
         return self.SolutionProposer(self.ResultEnum.SUCCESS)
 
@@ -275,8 +284,16 @@ class DoorOpen:
     def DetachFromDoor(self, *args):
         self.robot.ActivateTeachMode()
         self.robot.OpenGripper()
+        self.robot.DeactivateTeachMode()
+        actual = self.robot.GetActualQ()
+        cmd = copy.copy(actual)
+        cmd[-1] = 1.562967300415039
+        self.robot.MoveJ(cmd, 0.2, 0.2)
+        self.robot.MoveJ(  [-0.7124674955951136, -2.228109661732809, 1.6154589653015137, -2.5799620787249964, 0.632148027420044, 1.5978620052337646], 0.2, 0.2)
+        #self.robot.MoveJ(self.robot.INITIAL_JOINTS, 0.8, 0.8)
         self.robot.Fold()
-        return DetachGripperResponce(True, "SUCCESS")
+        self.robot.ActivateTeachMode()
+        return DetachGripperResponse(True, "SUCCESS")
 
 
 
