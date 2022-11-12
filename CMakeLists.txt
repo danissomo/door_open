@@ -56,6 +56,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate services in the 'srv' folder
 add_service_files(
   FILES
+  SetGripper.srv
   GetToolPose.srv
   GetJointPose.srv
   MoveL.srv
@@ -70,10 +71,7 @@ add_service_files(
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   geometry_msgs
-# )
+generate_messages( )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##

@@ -82,6 +82,24 @@ class Robot(HuskyGripper, HuskyUr, HuskyBase):
         HuskyGripper.__init__(self)
         HuskyUr.__init__(self, UR_IP)
 
+        from door_open.srv import ( GetJointPose, GetJointPoseResponse,
+                                    GetToolPose, GetToolPoseResponse,
+                                    MoveJ, MoveJResponse,
+                                    MoveL, MoveLResponse,
+                                    SetGripper, SetGripperResponse)
+        movej_ros = lambda qva: MoveJResponse(self.MoveJ(qva.cmd, qva.speed, qva.acc)) 
+        movel_ros = lambda qva: MoveLResponse(self.MoveL(qva.cmd, qva.speed, qva.acc))
+        getq_ros  = lambda m: GetJointPoseResponse(self.GetActualQ())
+        getl_ros  = lambda m: GetToolPoseResponse(self.GetActualTCPPose())
+        def set_gripper(req):
+            if req.open: self.OpenGripper()
+            else: self.CloseGripper()
+            return SetGripperResponse()
+        self.movej_srv = rospy.Service(rospy.get_param("/robo_param/husky/movej_srv_name"), MoveJ, movej_ros)
+        self.getq_srv = rospy.Service(rospy.get_param("/robo_param/husky/getq_srv_name"), GetJointPose, getq_ros)
+        self.movel_srv = rospy.Service(rospy.get_param("/robo_param/husky/movel_srv_name"), MoveL, movel_ros)
+        self.getl_srv = rospy.Service(rospy.get_param("/robo_param/husky/getl_srv_name"), GetToolPose, getl_ros)
+        self.grip_srv = rospy.Service(rospy.get_param("/robo_param/husky/grip_srv_name"), SetGripper, set_gripper)
         self._eef_hystory = PositionHystrory(self.GetActualTCPPose)
         
 

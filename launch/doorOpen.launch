@@ -1,5 +1,5 @@
 <launch>
-    <node name = "node" pkg = "door_tests" type = "door_open_node.py">
+    <node name = "node" pkg = "door_tests" type = "door_open_node.py" output="screen">
         <param name = "odom_topic"              value = "/husky_velocity_controller/odom"       type = "str" />
         <param name = "vel_topic"               value = "/husky_velocity_controller/cmd_vel"    type = "str" />
         <param name = "yolo_topic"              value = "/handle/points_yolo"                   type = "str" />
@@ -11,4 +11,4 @@
         <param name = "rs_frame_z"              value = "-0.08414625"                           type = "double" />
         <param name = "is_roslaunch"            value = "true"                                  type = "bool" />
     </node> 
-</launch>
+n

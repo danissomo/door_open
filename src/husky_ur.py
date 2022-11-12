@@ -50,16 +50,24 @@ class HuskyUr:
         return self._rtde_r.getActualTCPForce()
 
     def MoveJ(self, pose, vel=1.05, acc=1.4, asyncro=False):
+        
         if self._IsNaNorInf(pose):
             rospy.logwarn("robot controller got inf or nan")
+            
             return False
-        return self._rtde_c.moveJ(pose, vel, acc, asyncro)
+        self.DeactivateTeachMode()
+        rs = self._rtde_c.moveJ(pose, vel, acc, asyncro)
+        self.ActivateTeachMode()
+        return rs
 
     def MoveL(self, pose, vel=0.25, acc=1.2, asyncro=False):
         if self._IsNaNorInf(pose):
             rospy.logwarn("robot controller got inf or nan")
             return False
-        return self._rtde_c.moveL(pose, vel, acc, asyncro)
+        self.DeactivateTeachMode()
+        rs = self._rtde_c.moveL(pose, vel, acc, asyncro)
+        self.ActivateTeachMode()
+        return rs
 
     def SpeedJ(self, speed, acc=0.5, time=0.0):
         if self._IsNaNorInf(speed):

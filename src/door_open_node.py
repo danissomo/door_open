@@ -240,7 +240,7 @@ class DoorOpen:
                                         self.robot.RotvecFromBasis(door_h.coordinate_system_rel), 
                                         1, 
                                         0.4,
-                                        True)
+                                        True )
             self.robot.ActivateTeachMode()
             self.robot.CloseGripper()
             rospy.sleep(0.1)
